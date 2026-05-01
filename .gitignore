@@ -35,6 +35,10 @@ yarn-error.log*
 # but always commit example templates
 !.env*.example
 
+# supabase CLI local cache
+supabase/.temp/
+supabase/.branches/
+
 # vercel
 .vercel
 
