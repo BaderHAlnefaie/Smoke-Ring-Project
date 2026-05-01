@@ -1,0 +1,32 @@
+{
+  "common": {
+    "language": "العربية",
+    "currency": "SAR"
+  },
+  "header": {
+    "appName": "Smoke Ring"
+  },
+  "truck": {
+    "open": "Open now — order ahead",
+    "closed": "Closed — come back later"
+  },
+  "menu": {
+    "title": "Menu",
+    "empty": "No items available right now.",
+    "addToCart": "Add to cart",
+    "outOfStock": "Out of stock"
+  },
+  "cart": {
+    "title": "Your order",
+    "empty": "Your cart is empty.",
+    "subtotal": "Subtotal",
+    "vat": "VAT (15%)",
+    "total": "Total",
+    "checkout": "Checkout",
+    "remove": "Remove",
+    "quantity": "Quantity"
+  },
+  "phase1": {
+    "placeholder": "Phase 1 placeholder — menu items will appear here once Supabase is wired up."
+  }
+}
