@@ -4,6 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import "../globals.css";
 import { getDictionary, isLocale, locales } from "./dictionaries";
+import { CartButton } from "@/components/cart/CartButton";
+import { CartDrawer } from "@/components/cart/CartDrawer";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -39,14 +41,18 @@ export default async function RootLayout({
           <Link href={`/${lang}`} className="text-xl font-semibold tracking-tight">
             {dict.header.appName}
           </Link>
-          <Link
-            href={`/${otherLocale}`}
-            className="text-sm font-medium underline-offset-4 hover:underline"
-          >
-            {dict.common.language}
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/${otherLocale}`}
+              className="text-sm font-medium underline-offset-4 hover:underline px-2"
+            >
+              {dict.common.language}
+            </Link>
+            <CartButton />
+          </div>
         </header>
         <div className="flex flex-1 flex-col">{children}</div>
+        <CartDrawer lang={lang} dict={dict} />
       </body>
     </html>
   );
