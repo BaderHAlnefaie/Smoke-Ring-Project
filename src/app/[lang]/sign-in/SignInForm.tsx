@@ -10,16 +10,17 @@ type Props = {
   dict: Dictionary["auth"];
 };
 
-const initial: SignInState = { step: "request" };
+const requestInitial: SignInState = { step: "request" };
+const verifyInitial: SignInState = {};
 
 export function SignInForm({ next, mode, dict }: Props) {
   const [requestState, requestAction, requestPending] = useActionState(
     requestOtp,
-    initial,
+    requestInitial,
   );
   const [verifyState, verifyAction, verifyPending] = useActionState(
     verifyOtp,
-    initial,
+    verifyInitial,
   );
 
   const [identifier, setIdentifier] = useState("");
@@ -43,8 +44,8 @@ export function SignInForm({ next, mode, dict }: Props) {
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
-            pattern="\d{6}"
-            maxLength={6}
+            pattern="\d{4,10}"
+            maxLength={10}
             required
             className="w-full rounded-md border border-black/[.12] dark:border-white/[.12] bg-white dark:bg-zinc-950 px-3 py-2 text-base tabular-nums tracking-widest"
           />

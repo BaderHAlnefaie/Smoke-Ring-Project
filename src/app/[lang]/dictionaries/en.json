@@ -36,7 +36,7 @@
     "emailLabel": "Email",
     "sendCode": "Send code",
     "sending": "Sending…",
-    "codeLabel": "6-digit code",
+    "codeLabel": "Verification code",
     "codeSentTo": "We sent a code to",
     "verify": "Verify and continue",
     "verifying": "Verifying…"

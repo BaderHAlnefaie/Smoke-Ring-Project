@@ -23,7 +23,7 @@ const RequestSchema = useEmailFallback
 
 const VerifySchema = z.object({
   identifier: z.string().min(1),
-  token: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code."),
+  token: z.string().trim().regex(/^\d{4,10}$/, "Enter the numeric code from your email."),
 });
 
 export async function requestOtp(
