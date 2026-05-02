@@ -6,6 +6,7 @@ import "../globals.css";
 import { getDictionary, isLocale, locales } from "./dictionaries";
 import { CartButton } from "@/components/cart/CartButton";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { getSessionUser } from "@/lib/auth/dal";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -29,6 +30,7 @@ export default async function RootLayout({
   const dict = await getDictionary(lang);
   const dir = lang === "ar" ? "rtl" : "ltr";
   const otherLocale = lang === "ar" ? "en" : "ar";
+  const user = await getSessionUser();
 
   return (
     <html
@@ -48,6 +50,23 @@ export default async function RootLayout({
             >
               {dict.common.language}
             </Link>
+            {user ? (
+              <form action={`/${lang}/sign-out`} method="post">
+                <button
+                  type="submit"
+                  className="text-sm font-medium underline-offset-4 hover:underline px-2"
+                >
+                  {dict.header.signOut}
+                </button>
+              </form>
+            ) : (
+              <Link
+                href={`/${lang}/sign-in`}
+                className="text-sm font-medium underline-offset-4 hover:underline px-2"
+              >
+                {dict.header.signIn}
+              </Link>
+            )}
             <CartButton />
           </div>
         </header>

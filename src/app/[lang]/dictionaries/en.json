@@ -4,7 +4,9 @@
     "currency": "SAR"
   },
   "header": {
-    "appName": "Smoke Ring"
+    "appName": "Smoke Ring",
+    "signIn": "Sign in",
+    "signOut": "Sign out"
   },
   "truck": {
     "open": "Open now — order ahead",
@@ -23,8 +25,36 @@
     "vat": "VAT (15%)",
     "total": "Total",
     "checkout": "Checkout",
+    "checkoutPending": "Starting payment…",
+    "checkoutError": "Could not start checkout. Please try again.",
     "remove": "Remove",
     "quantity": "Quantity"
+  },
+  "auth": {
+    "title": "Sign in to order",
+    "phoneLabel": "Mobile number",
+    "emailLabel": "Email",
+    "sendCode": "Send code",
+    "sending": "Sending…",
+    "codeLabel": "6-digit code",
+    "codeSentTo": "We sent a code to",
+    "verify": "Verify and continue",
+    "verifying": "Verifying…"
+  },
+  "order": {
+    "title": "Order",
+    "status": "Status",
+    "placedOn": "Placed on",
+    "items": "Items",
+    "back": "Back to menu",
+    "states": {
+      "pending_payment": "Awaiting payment",
+      "paid": "Paid — sent to the truck",
+      "preparing": "Being prepared",
+      "ready": "Ready for pickup",
+      "picked_up": "Picked up",
+      "cancelled": "Cancelled"
+    }
   },
   "phase1": {
     "placeholder": "Phase 1 placeholder — menu items will appear here once Supabase is wired up."

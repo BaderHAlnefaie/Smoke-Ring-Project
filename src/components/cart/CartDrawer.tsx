@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Minus, Plus, Trash2, X } from "lucide-react";
 import { selectSubtotalHalalas, useCart } from "@/state/cart";
 import { formatHalalas, totalHalalas, vatHalalas } from "@/lib/money";
@@ -16,14 +17,46 @@ export function CartDrawer({ lang, dict }: Props) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  const router = useRouter();
   const isOpen = useCart((s) => s.isOpen);
   const close = useCart((s) => s.close);
   const items = useCart((s) => s.items);
   const setQty = useCart((s) => s.setQty);
   const remove = useCart((s) => s.remove);
+  const clear = useCart((s) => s.clear);
   const subtotal = useCart(selectSubtotalHalalas);
 
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   if (!mounted) return null;
+
+  async function handleCheckout() {
+    setError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lang,
+          items: items.map((i) => ({ itemId: i.itemId, qty: i.qty })),
+        }),
+      });
+      if (res.status === 401) {
+        router.push(`/${lang}/sign-in?next=${encodeURIComponent(`/${lang}`)}`);
+        return;
+      }
+      if (!res.ok) throw new Error("checkout_failed");
+      const data = (await res.json()) as { paymentUrl?: string };
+      if (!data.paymentUrl) throw new Error("no_payment_url");
+      clear();
+      window.location.href = data.paymentUrl;
+    } catch {
+      setError(dict.cart.checkoutError);
+      setSubmitting(false);
+    }
+  }
 
   const vat = vatHalalas(subtotal);
   const total = totalHalalas(subtotal);
@@ -131,13 +164,18 @@ export function CartDrawer({ lang, dict }: Props) {
               value={formatHalalas(total, lang)}
               bold
             />
+            {error && (
+              <p className="text-sm text-red-600" role="alert">
+                {error}
+              </p>
+            )}
             <button
               type="button"
-              disabled
-              className="mt-2 w-full rounded-full bg-foreground px-5 py-3 text-base font-medium text-background opacity-60 cursor-not-allowed"
-              title="Checkout arrives in Phase 2"
+              onClick={handleCheckout}
+              disabled={submitting}
+              className="mt-2 w-full rounded-full bg-foreground px-5 py-3 text-base font-medium text-background disabled:opacity-60"
             >
-              {dict.cart.checkout}
+              {submitting ? dict.cart.checkoutPending : dict.cart.checkout}
             </button>
           </footer>
         )}
