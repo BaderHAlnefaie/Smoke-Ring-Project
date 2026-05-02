@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getSessionUser } from "@/lib/auth/dal";
 import { createPendingOrder } from "@/lib/db/orders";
 import { createInvoice } from "@/lib/moyasar/client";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isLocale, defaultLocale } from "@/app/[lang]/dictionaries";
 
 const Body = z.object({
@@ -68,6 +69,12 @@ export async function POST(req: NextRequest) {
       { status: 502 },
     );
   }
+
+  // Persist invoice id so the webhook can resolve the order from data.invoice_id.
+  await createAdminClient()
+    .from("orders")
+    .update({ moyasar_invoice_id: invoice.id })
+    .eq("id", created.order.id);
 
   return NextResponse.json({
     orderId: created.order.id,

@@ -1,14 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { verifyWebhookSignature } from "@/lib/moyasar/client";
+import { verifyWebhookToken } from "@/lib/moyasar/client";
 import type { OrderStatus } from "@/lib/db/types";
 
 type MoyasarWebhookPayload = {
   type?: string;
+  secret_token?: string;
   data?: {
     id?: string;
     status?: string;
     amount?: number;
+    invoice_id?: string | null;
     metadata?: Record<string, string> | null;
   };
 };
@@ -23,12 +25,6 @@ function nextStatusFor(eventType: string | undefined, paymentStatus: string | un
 
 export async function POST(req: NextRequest) {
   const raw = await req.text();
-  const signature =
-    req.headers.get("x-moyasar-signature") ?? req.headers.get("moyasar-signature");
-
-  if (!verifyWebhookSignature(raw, signature)) {
-    return NextResponse.json({ error: "invalid_signature" }, { status: 401 });
-  }
 
   let payload: MoyasarWebhookPayload;
   try {
@@ -37,20 +33,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
+  if (!verifyWebhookToken(payload.secret_token)) {
+    return NextResponse.json({ error: "invalid_token" }, { status: 401 });
+  }
+
   const moyasarPaymentId = payload.data?.id;
   const paymentStatus = payload.data?.status;
-  const orderIdRaw = payload.data?.metadata?.order_id;
+  const invoiceId = payload.data?.invoice_id ?? null;
+  const metaOrderId = payload.data?.metadata?.order_id ?? null;
   const amount = payload.data?.amount ?? 0;
 
-  if (!moyasarPaymentId || !orderIdRaw) {
+  if (!moyasarPaymentId || (!invoiceId && !metaOrderId)) {
     return NextResponse.json({ error: "missing_fields" }, { status: 400 });
-  }
-  const orderId = Number(orderIdRaw);
-  if (!Number.isInteger(orderId) || orderId <= 0) {
-    return NextResponse.json({ error: "bad_order_id" }, { status: 400 });
   }
 
   const admin = createAdminClient();
+
+  // Prefer metadata.order_id (set when Moyasar payments are created directly);
+  // fall back to invoice_id lookup for the hosted-invoice flow.
+  let orderId: number | null = null;
+  if (metaOrderId) {
+    const n = Number(metaOrderId);
+    if (Number.isInteger(n) && n > 0) orderId = n;
+  }
+  if (orderId === null && invoiceId) {
+    const { data: orderRow } = await admin
+      .from("orders")
+      .select("id")
+      .eq("moyasar_invoice_id", invoiceId)
+      .maybeSingle();
+    if (orderRow) orderId = orderRow.id;
+  }
+  if (!orderId) {
+    return NextResponse.json({ error: "order_not_found" }, { status: 404 });
+  }
 
   const { data: existing } = await admin
     .from("payments")

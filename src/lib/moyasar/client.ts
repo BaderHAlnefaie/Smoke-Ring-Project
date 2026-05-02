@@ -1,5 +1,5 @@
 import "server-only";
-import { createHmac, timingSafeEqual } from "crypto";
+import { timingSafeEqual } from "crypto";
 
 const API_BASE = "https://api.moyasar.com/v1";
 
@@ -52,17 +52,14 @@ export async function createInvoice(
   return data;
 }
 
-export function verifyWebhookSignature(rawBody: string, signature: string | null): boolean {
+// Moyasar does not HMAC webhooks. The shared secret you configure in the
+// dashboard is delivered as a `secret_token` field inside the JSON body.
+// Verification = constant-time compare of that field against our env secret.
+export function verifyWebhookToken(receivedToken: string | undefined | null): boolean {
   const secret = process.env.MOYASAR_WEBHOOK_SECRET;
-  if (!secret || !signature) return false;
-  const expected = createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
-  const a = Buffer.from(expected, "hex");
-  let b: Buffer;
-  try {
-    b = Buffer.from(signature, "hex");
-  } catch {
-    return false;
-  }
+  if (!secret || !receivedToken) return false;
+  const a = Buffer.from(secret, "utf8");
+  const b = Buffer.from(receivedToken, "utf8");
   if (a.length !== b.length) return false;
   return timingSafeEqual(a, b);
 }

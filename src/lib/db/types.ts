@@ -44,6 +44,7 @@ export type Order = {
   subtotal_halalas: number;
   vat_halalas: number;
   total_halalas: number;
+  moyasar_invoice_id: string | null;
   created_at: string;
   updated_at: string;
 };
