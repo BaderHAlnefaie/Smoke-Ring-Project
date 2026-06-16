@@ -6,7 +6,9 @@
   "header": {
     "appName": "Smoke Ring",
     "signIn": "Sign in",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "orders": "Orders",
+    "staff": "Staff"
   },
   "truck": {
     "open": "Open now — order ahead",
@@ -28,7 +30,13 @@
     "checkoutPending": "Starting payment…",
     "checkoutError": "Could not start checkout. Please try again.",
     "remove": "Remove",
-    "quantity": "Quantity"
+    "quantity": "Quantity",
+    "closeCart": "Close cart",
+    "notesPlaceholder": "Add a note (e.g. no onions)",
+    "pickupTitle": "Pickup",
+    "pickupAsap": "As soon as possible",
+    "pickupScheduled": "Schedule a time",
+    "scheduleRequired": "Please choose a pickup time."
   },
   "auth": {
     "title": "Sign in to order",
@@ -45,8 +53,10 @@
     "title": "Order",
     "status": "Status",
     "placedOn": "Placed on",
+    "scheduledFor": "Scheduled for",
     "items": "Items",
     "back": "Back to menu",
+    "viewAll": "View all orders",
     "states": {
       "pending_payment": "Awaiting payment",
       "paid": "Paid — sent to the truck",
@@ -56,7 +66,19 @@
       "cancelled": "Cancelled"
     }
   },
-  "phase1": {
-    "placeholder": "Phase 1 placeholder — menu items will appear here once Supabase is wired up."
+  "orders": {
+    "title": "Your orders",
+    "empty": "You haven't placed any orders yet."
+  },
+  "staff": {
+    "title": "Kitchen board",
+    "empty": "No active orders.",
+    "active": "active",
+    "actions": {
+      "startPreparing": "Start preparing",
+      "markReady": "Mark ready",
+      "markPickedUp": "Mark picked up",
+      "cancel": "Cancel"
+    }
   }
 }

@@ -6,7 +6,9 @@
   "header": {
     "appName": "سموك رينج",
     "signIn": "تسجيل الدخول",
-    "signOut": "تسجيل الخروج"
+    "signOut": "تسجيل الخروج",
+    "orders": "طلباتي",
+    "staff": "الطاقم"
   },
   "truck": {
     "open": "مفتوح الآن — اطلب مسبقًا",
@@ -28,7 +30,13 @@
     "checkoutPending": "جارِ بدء الدفع…",
     "checkoutError": "تعذّر بدء عملية الدفع. حاول مرة أخرى.",
     "remove": "إزالة",
-    "quantity": "الكمية"
+    "quantity": "الكمية",
+    "closeCart": "إغلاق السلة",
+    "notesPlaceholder": "أضف ملاحظة (مثل: بدون بصل)",
+    "pickupTitle": "الاستلام",
+    "pickupAsap": "في أقرب وقت",
+    "pickupScheduled": "حدد وقتًا",
+    "scheduleRequired": "الرجاء اختيار وقت الاستلام."
   },
   "auth": {
     "title": "سجّل الدخول للطلب",
@@ -45,8 +53,10 @@
     "title": "الطلب",
     "status": "الحالة",
     "placedOn": "تاريخ الطلب",
+    "scheduledFor": "موعد الاستلام",
     "items": "الأصناف",
     "back": "العودة إلى القائمة",
+    "viewAll": "عرض كل الطلبات",
     "states": {
       "pending_payment": "بانتظار الدفع",
       "paid": "تم الدفع — أُرسل للعربة",
@@ -56,7 +66,19 @@
       "cancelled": "ملغى"
     }
   },
-  "phase1": {
-    "placeholder": "صفحة المرحلة الأولى — ستظهر أصناف القائمة هنا بعد ربط Supabase."
+  "orders": {
+    "title": "طلباتك",
+    "empty": "لم تقم بأي طلب بعد."
+  },
+  "staff": {
+    "title": "شاشة المطبخ",
+    "empty": "لا توجد طلبات نشطة.",
+    "active": "نشط",
+    "actions": {
+      "startPreparing": "بدء التحضير",
+      "markReady": "جاهز",
+      "markPickedUp": "تم الاستلام",
+      "cancel": "إلغاء"
+    }
   }
 }

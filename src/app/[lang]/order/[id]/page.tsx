@@ -4,6 +4,7 @@ import { getDictionary, isLocale } from "../../dictionaries";
 import { requireUser } from "@/lib/auth/dal";
 import { fetchOrderForUser } from "@/lib/db/orders";
 import { formatHalalas } from "@/lib/money";
+import { OrderStatusLive } from "@/components/order/OrderStatusLive";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +29,15 @@ export default async function OrderPage({ params }: PageProps<"/[lang]/order/[id
     timeStyle: "short",
   });
 
-  const statusLabel = dict.order.states[order.status];
   const isPending = order.status === "pending_payment";
+
+  const scheduledFmt =
+    order.pickup_type === "scheduled" && order.scheduled_for
+      ? new Date(order.scheduled_for).toLocaleString(dateLocale, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+      : null;
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 space-y-6">
@@ -40,19 +48,19 @@ export default async function OrderPage({ params }: PageProps<"/[lang]/order/[id
         <p className="text-sm text-zinc-500">
           {dict.order.placedOn} {placedFmt}
         </p>
+        {scheduledFmt && (
+          <p className="text-sm text-zinc-500">
+            {dict.order.scheduledFor} {scheduledFmt}
+          </p>
+        )}
       </div>
 
-      <div
-        className={`rounded-lg px-4 py-3 text-sm font-medium ${
-          order.status === "paid" || order.status === "preparing" || order.status === "ready"
-            ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"
-            : order.status === "cancelled"
-              ? "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200"
-              : "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200"
-        }`}
-      >
-        {dict.order.status}: {statusLabel}
-      </div>
+      <OrderStatusLive
+        orderId={order.id}
+        initialStatus={order.status}
+        statusLabel={dict.order.status}
+        states={dict.order.states}
+      />
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{dict.order.items}</h2>
@@ -60,9 +68,14 @@ export default async function OrderPage({ params }: PageProps<"/[lang]/order/[id
           {items.map((it) => {
             const name = lang === "ar" ? it.name_ar : it.name_en;
             return (
-              <li key={it.id} className="flex items-center gap-3 px-4 py-3">
-                <span className="w-8 text-sm tabular-nums text-zinc-500">×{it.qty}</span>
-                <span className="flex-1 truncate">{name}</span>
+              <li key={it.id} className="flex items-start gap-3 px-4 py-3">
+                <span className="w-8 shrink-0 text-sm tabular-nums text-zinc-500">×{it.qty}</span>
+                <span className="flex-1 min-w-0">
+                  <span className="block truncate">{name}</span>
+                  {it.notes && (
+                    <span className="block text-xs text-zinc-500 mt-0.5">{it.notes}</span>
+                  )}
+                </span>
                 <span className="text-sm tabular-nums">
                   {formatHalalas(it.unit_halalas * it.qty, lang)}
                 </span>
@@ -88,12 +101,20 @@ export default async function OrderPage({ params }: PageProps<"/[lang]/order/[id
         </p>
       )}
 
-      <Link
-        href={`/${lang}`}
-        className="inline-block text-sm font-medium underline-offset-4 hover:underline"
-      >
-        {dict.order.back}
-      </Link>
+      <div className="flex items-center gap-4">
+        <Link
+          href={`/${lang}`}
+          className="inline-block text-sm font-medium underline-offset-4 hover:underline"
+        >
+          {dict.order.back}
+        </Link>
+        <Link
+          href={`/${lang}/orders`}
+          className="inline-block text-sm font-medium underline-offset-4 hover:underline"
+        >
+          {dict.order.viewAll}
+        </Link>
+      </div>
     </main>
   );
 }
