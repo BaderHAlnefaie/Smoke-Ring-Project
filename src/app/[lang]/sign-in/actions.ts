@@ -2,7 +2,9 @@
 
 import { z } from "zod";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 const useEmailFallback = process.env.AUTH_FALLBACK_EMAIL === "true";
 
@@ -40,8 +42,24 @@ export async function requestOtp(
     };
   }
 
-  const supabase = await createClient();
   const { identifier } = parsed.data;
+
+  // Throttle OTP sends: caps SMS/email cost and slows account enumeration.
+  const ip = clientIp(await headers());
+  const perId = await rateLimit(`otp:${identifier.toLowerCase()}`, {
+    max: 5,
+    windowSeconds: 600,
+  });
+  const perIp = await rateLimit(`otp-ip:${ip}`, { max: 15, windowSeconds: 600 });
+  if (!perId || !perIp) {
+    return {
+      error: "Too many attempts. Please wait a few minutes and try again.",
+      identifier,
+      step: "request",
+    };
+  }
+
+  const supabase = await createClient();
 
   const { error } = useEmailFallback
     ? await supabase.auth.signInWithOtp({
