@@ -86,7 +86,7 @@ begin
     for share;
 
     if not found then
-      raise exception 'Item % is no longer available' using errcode = 'P0001', v_item_id;
+      raise exception 'Item % is no longer available', v_item_id using errcode = 'P0001';
     end if;
     if not v_item.is_available then
       raise exception 'Item "%" is unavailable', v_item.name_en using errcode = 'P0001';
