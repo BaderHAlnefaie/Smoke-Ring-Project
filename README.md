@@ -46,6 +46,7 @@ through its lifecycle.
    | `AUTH_FALLBACK_EMAIL` | `true` to use email magic-link instead of phone OTP (handy in dev) |
    | `MOYASAR_SECRET_KEY` | Moyasar secret key (server-only) |
    | `MOYASAR_WEBHOOK_SECRET` | Shared secret configured on the Moyasar webhook |
+   | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_FROM` | Optional. Enable "order ready" SMS. If unset, notifications are still recorded + logged |
 
 3. **Run the database migrations**
 
@@ -62,6 +63,8 @@ through its lifecycle.
    - `0003_orders_moyasar_invoice_id` — invoice id on orders for webhook resolution
    - `0004_rpcs_lifecycle_ratelimit` — transactional `create_order`, the
      `advance_order_status` state machine, and the rate limiter
+   - `0005_truck_gating_and_notifications` — truck open/closed enforcement inside
+     `create_order`, plus the `notifications` table
 
 4. **Configure the Moyasar webhook**
 
@@ -91,6 +94,21 @@ on conflict do nothing;
 ```
 
 Find the UUID in Supabase → Authentication → Users.
+
+Staff/admin users get two extra screens:
+
+- **`/<lang>/staff`** — the live kitchen board. Advance orders through
+  `preparing → ready → picked_up` or cancel them. Marking an order *ready* sends
+  the customer an "order ready" notification.
+- **`/<lang>/admin`** — manage the menu (prices, availability / 86 an item) and
+  the truck (open/closed, accepting scheduled orders, estimated wait) without SQL.
+
+## Truck availability
+
+`create_order` enforces truck status server-side: ASAP orders are rejected when
+the truck is closed, and scheduled orders when it isn't accepting them. The
+storefront also disables checkout and shows the estimated wait. Toggle all of
+this from the admin console.
 
 ## Order lifecycle
 

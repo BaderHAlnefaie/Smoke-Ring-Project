@@ -8,6 +8,7 @@ import { CartButton } from "@/components/cart/CartButton";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { LocaleSwitch } from "@/components/LocaleSwitch";
 import { getSessionUser, isStaffUser } from "@/lib/auth/dal";
+import { fetchTruckStatus } from "@/lib/db/queries";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -33,6 +34,7 @@ export default async function RootLayout({
   const otherLocale = lang === "ar" ? "en" : "ar";
   const user = await getSessionUser();
   const staff = user ? await isStaffUser(user.id) : false;
+  const truck = await fetchTruckStatus();
 
   return (
     <html
@@ -48,12 +50,20 @@ export default async function RootLayout({
           <div className="flex items-center gap-2">
             <LocaleSwitch current={lang} other={otherLocale} label={dict.common.language} />
             {staff && (
-              <Link
-                href={`/${lang}/staff`}
-                className="text-sm font-medium underline-offset-4 hover:underline px-2"
-              >
-                {dict.header.staff}
-              </Link>
+              <>
+                <Link
+                  href={`/${lang}/staff`}
+                  className="text-sm font-medium underline-offset-4 hover:underline px-2"
+                >
+                  {dict.header.staff}
+                </Link>
+                <Link
+                  href={`/${lang}/admin`}
+                  className="text-sm font-medium underline-offset-4 hover:underline px-2"
+                >
+                  {dict.header.admin}
+                </Link>
+              </>
             )}
             {user ? (
               <>
@@ -84,7 +94,13 @@ export default async function RootLayout({
           </div>
         </header>
         <div className="flex flex-1 flex-col">{children}</div>
-        <CartDrawer lang={lang} dict={dict} />
+        <CartDrawer
+          lang={lang}
+          dict={dict}
+          truckOpen={truck?.is_open ?? false}
+          acceptingScheduled={truck?.accepting_scheduled ?? false}
+          estWaitMinutes={truck?.est_wait_minutes ?? 0}
+        />
       </body>
     </html>
   );

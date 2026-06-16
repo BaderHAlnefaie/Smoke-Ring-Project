@@ -8,11 +8,13 @@
     "signIn": "تسجيل الدخول",
     "signOut": "تسجيل الخروج",
     "orders": "طلباتي",
-    "staff": "الطاقم"
+    "staff": "الطاقم",
+    "admin": "الإدارة"
   },
   "truck": {
     "open": "مفتوح الآن — اطلب مسبقًا",
-    "closed": "مغلق — عُد لاحقًا"
+    "closed": "مغلق — عُد لاحقًا",
+    "minutes": "دقيقة"
   },
   "menu": {
     "title": "القائمة",
@@ -36,7 +38,11 @@
     "pickupTitle": "الاستلام",
     "pickupAsap": "في أقرب وقت",
     "pickupScheduled": "حدد وقتًا",
-    "scheduleRequired": "الرجاء اختيار وقت الاستلام."
+    "scheduleRequired": "الرجاء اختيار وقت الاستلام.",
+    "estWait": "مدة الانتظار التقديرية",
+    "truckClosed": "العربة مغلقة حاليًا.",
+    "scheduleInstead": "يمكنك تحديد وقت بدلًا من ذلك.",
+    "scheduledUnavailable": "لا يتم قبول الطلبات المجدولة حاليًا."
   },
   "auth": {
     "title": "سجّل الدخول للطلب",
@@ -80,5 +86,19 @@
       "markPickedUp": "تم الاستلام",
       "cancel": "إلغاء"
     }
+  },
+  "admin": {
+    "title": "الإدارة",
+    "truckSection": "حالة العربة",
+    "open": "مفتوحة للطلبات",
+    "acceptingScheduled": "قبول الطلبات المجدولة",
+    "estWaitLabel": "مدة الانتظار التقديرية (دقائق)",
+    "menuSection": "القائمة",
+    "priceLabel": "السعر (ر.س)",
+    "available": "متوفر",
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ…",
+    "saved": "تم الحفظ",
+    "error": "تعذّر الحفظ. حاول مرة أخرى."
   }
 }

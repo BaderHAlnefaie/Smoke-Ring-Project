@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireStaff } from "@/lib/auth/dal";
 import { advanceOrderStatus } from "@/lib/db/orders";
+import { notifyOrderReady } from "@/lib/notify";
 import { log } from "@/lib/log";
 
 const Schema = z.object({
@@ -35,12 +36,18 @@ export async function setOrderStatus(
   // Throws/redirects if the caller isn't staff.
   await requireStaff(`/${lang}/staff`);
 
+  let updated;
   try {
-    await advanceOrderStatus(orderId, next);
+    updated = await advanceOrderStatus(orderId, next);
   } catch (err) {
     const message = err instanceof Error ? err.message : "update_failed";
     log.warn("staff_status_update_failed", { orderId, next, message });
     return { error: message };
+  }
+
+  // Tell the customer when their order is ready (fail-soft).
+  if (next === "ready") {
+    await notifyOrderReady(updated);
   }
 
   revalidatePath(`/${lang}/staff`);

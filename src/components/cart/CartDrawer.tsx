@@ -12,6 +12,9 @@ import type { Locale } from "@/app/[lang]/dictionaries";
 type Props = {
   lang: Locale;
   dict: Dictionary;
+  truckOpen: boolean;
+  acceptingScheduled: boolean;
+  estWaitMinutes: number;
 };
 
 /** Smallest datetime-local value we accept: 15 minutes out, to the minute. */
@@ -21,7 +24,13 @@ function minScheduledLocal(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function CartDrawer({ lang, dict }: Props) {
+export function CartDrawer({
+  lang,
+  dict,
+  truckOpen,
+  acceptingScheduled,
+  estWaitMinutes,
+}: Props) {
   const mounted = useHydrated();
 
   const router = useRouter();
@@ -63,7 +72,19 @@ export function CartDrawer({ lang, dict }: Props) {
 
   const minLocal = minScheduledLocal();
 
+  const asapBlocked = pickupType === "asap" && !truckOpen;
+  const scheduledBlocked = pickupType === "scheduled" && !acceptingScheduled;
+  const pickupBlocked = asapBlocked || scheduledBlocked;
+
   async function handleCheckout() {
+    if (asapBlocked) {
+      setError(dict.cart.truckClosed);
+      return;
+    }
+    if (scheduledBlocked) {
+      setError(dict.cart.scheduledUnavailable);
+      return;
+    }
     if (pickupType === "scheduled" && !scheduledFor) {
       setError(dict.cart.scheduleRequired);
       return;
@@ -252,6 +273,20 @@ export function CartDrawer({ lang, dict }: Props) {
                   className="w-full rounded-md border border-black/[.12] dark:border-white/[.16] bg-transparent px-2.5 py-1.5 text-sm"
                 />
               )}
+              {asapBlocked ? (
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                  {dict.cart.truckClosed}
+                  {acceptingScheduled ? ` ${dict.cart.scheduleInstead}` : ""}
+                </p>
+              ) : scheduledBlocked ? (
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                  {dict.cart.scheduledUnavailable}
+                </p>
+              ) : pickupType === "asap" && estWaitMinutes > 0 ? (
+                <p className="text-sm text-zinc-500">
+                  ~{estWaitMinutes} {dict.truck.minutes} {dict.cart.estWait}
+                </p>
+              ) : null}
             </fieldset>
 
             <div className="space-y-2">
@@ -267,7 +302,7 @@ export function CartDrawer({ lang, dict }: Props) {
             <button
               type="button"
               onClick={handleCheckout}
-              disabled={submitting}
+              disabled={submitting || pickupBlocked}
               className="mt-1 w-full rounded-full bg-foreground px-5 py-3 text-base font-medium text-background disabled:opacity-60"
             >
               {submitting ? dict.cart.checkoutPending : dict.cart.checkout}

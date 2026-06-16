@@ -8,11 +8,13 @@
     "signIn": "Sign in",
     "signOut": "Sign out",
     "orders": "Orders",
-    "staff": "Staff"
+    "staff": "Staff",
+    "admin": "Admin"
   },
   "truck": {
     "open": "Open now — order ahead",
-    "closed": "Closed — come back later"
+    "closed": "Closed — come back later",
+    "minutes": "min"
   },
   "menu": {
     "title": "Menu",
@@ -36,7 +38,11 @@
     "pickupTitle": "Pickup",
     "pickupAsap": "As soon as possible",
     "pickupScheduled": "Schedule a time",
-    "scheduleRequired": "Please choose a pickup time."
+    "scheduleRequired": "Please choose a pickup time.",
+    "estWait": "estimated wait",
+    "truckClosed": "The truck is closed right now.",
+    "scheduleInstead": "Schedule a time instead.",
+    "scheduledUnavailable": "Scheduled orders aren't being accepted right now."
   },
   "auth": {
     "title": "Sign in to order",
@@ -80,5 +86,19 @@
       "markPickedUp": "Mark picked up",
       "cancel": "Cancel"
     }
+  },
+  "admin": {
+    "title": "Admin",
+    "truckSection": "Truck status",
+    "open": "Open for orders",
+    "acceptingScheduled": "Accepting scheduled orders",
+    "estWaitLabel": "Estimated wait (minutes)",
+    "menuSection": "Menu",
+    "priceLabel": "Price (SAR)",
+    "available": "Available",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "error": "Could not save. Please try again."
   }
 }

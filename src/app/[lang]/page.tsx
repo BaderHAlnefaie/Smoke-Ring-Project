@@ -11,7 +11,13 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
   const { categories, items, truck } = await fetchMenu();
 
   const isOpen = truck?.is_open ?? false;
-  const statusLabel = isOpen ? dict.truck.open : dict.truck.closed;
+  const wait = truck?.est_wait_minutes ?? 0;
+  const statusLabel =
+    isOpen && wait > 0
+      ? `${dict.truck.open} · ~${wait} ${dict.truck.minutes}`
+      : isOpen
+        ? dict.truck.open
+        : dict.truck.closed;
   const statusClass = isOpen
     ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"
     : "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
