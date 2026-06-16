@@ -42,7 +42,7 @@ export type Database = {
           created_at: string;
         };
         Insert: never;
-        Update: never;
+        Update: Partial<{ price_halalas: number; is_available: boolean; sort_order: number }>;
         Relationships: [];
       };
       truck_status: {
@@ -54,7 +54,12 @@ export type Database = {
           updated_at: string;
         };
         Insert: never;
-        Update: never;
+        Update: Partial<{
+          is_open: boolean;
+          est_wait_minutes: number;
+          accepting_scheduled: boolean;
+          updated_at: string;
+        }>;
         Relationships: [];
       };
       profiles: {
@@ -118,6 +123,28 @@ export type Database = {
         Row: { key: string; window_start: string; count: number };
         Insert: { key: string; window_start: string; count?: number };
         Update: Partial<{ key: string; window_start: string; count: number }>;
+        Relationships: [];
+      };
+      notifications: {
+        Row: {
+          id: number;
+          order_id: number;
+          user_id: string;
+          type: string;
+          channel: string;
+          status: string;
+          detail: string | null;
+          created_at: string;
+        };
+        Insert: {
+          order_id: number;
+          user_id: string;
+          type: string;
+          channel: string;
+          status: string;
+          detail?: string | null;
+        };
+        Update: Partial<{ status: string; detail: string | null }>;
         Relationships: [];
       };
     };
