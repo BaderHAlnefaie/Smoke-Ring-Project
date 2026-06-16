@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Category, MenuItem } from "@/lib/db/types";
 import type { Dictionary, Locale } from "@/app/[lang]/dictionaries";
 import { formatHalalas } from "@/lib/money";
@@ -47,6 +48,15 @@ export function MenuList({ categories, items, lang, dict }: Props) {
                     key={item.id}
                     className="flex items-center gap-4 px-4 py-3"
                   >
+                    {item.image_url && (
+                      <Image
+                        src={item.image_url}
+                        alt={name}
+                        width={64}
+                        height={64}
+                        className="h-16 w-16 shrink-0 rounded-md object-cover"
+                      />
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium">{name}</p>
                       {description && (

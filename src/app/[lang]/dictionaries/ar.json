@@ -6,11 +6,15 @@
   "header": {
     "appName": "سموك رينج",
     "signIn": "تسجيل الدخول",
-    "signOut": "تسجيل الخروج"
+    "signOut": "تسجيل الخروج",
+    "orders": "طلباتي",
+    "staff": "الطاقم",
+    "admin": "الإدارة"
   },
   "truck": {
     "open": "مفتوح الآن — اطلب مسبقًا",
-    "closed": "مغلق — عُد لاحقًا"
+    "closed": "مغلق — عُد لاحقًا",
+    "minutes": "دقيقة"
   },
   "menu": {
     "title": "القائمة",
@@ -28,7 +32,17 @@
     "checkoutPending": "جارِ بدء الدفع…",
     "checkoutError": "تعذّر بدء عملية الدفع. حاول مرة أخرى.",
     "remove": "إزالة",
-    "quantity": "الكمية"
+    "quantity": "الكمية",
+    "closeCart": "إغلاق السلة",
+    "notesPlaceholder": "أضف ملاحظة (مثل: بدون بصل)",
+    "pickupTitle": "الاستلام",
+    "pickupAsap": "في أقرب وقت",
+    "pickupScheduled": "حدد وقتًا",
+    "scheduleRequired": "الرجاء اختيار وقت الاستلام.",
+    "estWait": "مدة الانتظار التقديرية",
+    "truckClosed": "العربة مغلقة حاليًا.",
+    "scheduleInstead": "يمكنك تحديد وقت بدلًا من ذلك.",
+    "scheduledUnavailable": "لا يتم قبول الطلبات المجدولة حاليًا."
   },
   "auth": {
     "title": "سجّل الدخول للطلب",
@@ -45,8 +59,10 @@
     "title": "الطلب",
     "status": "الحالة",
     "placedOn": "تاريخ الطلب",
+    "scheduledFor": "موعد الاستلام",
     "items": "الأصناف",
     "back": "العودة إلى القائمة",
+    "viewAll": "عرض كل الطلبات",
     "states": {
       "pending_payment": "بانتظار الدفع",
       "paid": "تم الدفع — أُرسل للعربة",
@@ -56,7 +72,33 @@
       "cancelled": "ملغى"
     }
   },
-  "phase1": {
-    "placeholder": "صفحة المرحلة الأولى — ستظهر أصناف القائمة هنا بعد ربط Supabase."
+  "orders": {
+    "title": "طلباتك",
+    "empty": "لم تقم بأي طلب بعد."
+  },
+  "staff": {
+    "title": "شاشة المطبخ",
+    "empty": "لا توجد طلبات نشطة.",
+    "active": "نشط",
+    "actions": {
+      "startPreparing": "بدء التحضير",
+      "markReady": "جاهز",
+      "markPickedUp": "تم الاستلام",
+      "cancel": "إلغاء"
+    }
+  },
+  "admin": {
+    "title": "الإدارة",
+    "truckSection": "حالة العربة",
+    "open": "مفتوحة للطلبات",
+    "acceptingScheduled": "قبول الطلبات المجدولة",
+    "estWaitLabel": "مدة الانتظار التقديرية (دقائق)",
+    "menuSection": "القائمة",
+    "priceLabel": "السعر (ر.س)",
+    "available": "متوفر",
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ…",
+    "saved": "تم الحفظ",
+    "error": "تعذّر الحفظ. حاول مرة أخرى."
   }
 }

@@ -6,7 +6,9 @@ import "../globals.css";
 import { getDictionary, isLocale, locales } from "./dictionaries";
 import { CartButton } from "@/components/cart/CartButton";
 import { CartDrawer } from "@/components/cart/CartDrawer";
-import { getSessionUser } from "@/lib/auth/dal";
+import { LocaleSwitch } from "@/components/LocaleSwitch";
+import { getSessionUser, isStaffUser } from "@/lib/auth/dal";
+import { fetchTruckStatus } from "@/lib/db/queries";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -31,6 +33,8 @@ export default async function RootLayout({
   const dir = lang === "ar" ? "rtl" : "ltr";
   const otherLocale = lang === "ar" ? "en" : "ar";
   const user = await getSessionUser();
+  const staff = user ? await isStaffUser(user.id) : false;
+  const truck = await fetchTruckStatus();
 
   return (
     <html
@@ -44,21 +48,40 @@ export default async function RootLayout({
             {dict.header.appName}
           </Link>
           <div className="flex items-center gap-2">
-            <Link
-              href={`/${otherLocale}`}
-              className="text-sm font-medium underline-offset-4 hover:underline px-2"
-            >
-              {dict.common.language}
-            </Link>
-            {user ? (
-              <form action={`/${lang}/sign-out`} method="post">
-                <button
-                  type="submit"
+            <LocaleSwitch current={lang} other={otherLocale} label={dict.common.language} />
+            {staff && (
+              <>
+                <Link
+                  href={`/${lang}/staff`}
                   className="text-sm font-medium underline-offset-4 hover:underline px-2"
                 >
-                  {dict.header.signOut}
-                </button>
-              </form>
+                  {dict.header.staff}
+                </Link>
+                <Link
+                  href={`/${lang}/admin`}
+                  className="text-sm font-medium underline-offset-4 hover:underline px-2"
+                >
+                  {dict.header.admin}
+                </Link>
+              </>
+            )}
+            {user ? (
+              <>
+                <Link
+                  href={`/${lang}/orders`}
+                  className="text-sm font-medium underline-offset-4 hover:underline px-2"
+                >
+                  {dict.header.orders}
+                </Link>
+                <form action={`/${lang}/sign-out`} method="post">
+                  <button
+                    type="submit"
+                    className="text-sm font-medium underline-offset-4 hover:underline px-2"
+                  >
+                    {dict.header.signOut}
+                  </button>
+                </form>
+              </>
             ) : (
               <Link
                 href={`/${lang}/sign-in`}
@@ -71,7 +94,13 @@ export default async function RootLayout({
           </div>
         </header>
         <div className="flex flex-1 flex-col">{children}</div>
-        <CartDrawer lang={lang} dict={dict} />
+        <CartDrawer
+          lang={lang}
+          dict={dict}
+          truckOpen={truck?.is_open ?? false}
+          acceptingScheduled={truck?.accepting_scheduled ?? false}
+          estWaitMinutes={truck?.est_wait_minutes ?? 0}
+        />
       </body>
     </html>
   );

@@ -6,11 +6,15 @@
   "header": {
     "appName": "Smoke Ring",
     "signIn": "Sign in",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "orders": "Orders",
+    "staff": "Staff",
+    "admin": "Admin"
   },
   "truck": {
     "open": "Open now — order ahead",
-    "closed": "Closed — come back later"
+    "closed": "Closed — come back later",
+    "minutes": "min"
   },
   "menu": {
     "title": "Menu",
@@ -28,7 +32,17 @@
     "checkoutPending": "Starting payment…",
     "checkoutError": "Could not start checkout. Please try again.",
     "remove": "Remove",
-    "quantity": "Quantity"
+    "quantity": "Quantity",
+    "closeCart": "Close cart",
+    "notesPlaceholder": "Add a note (e.g. no onions)",
+    "pickupTitle": "Pickup",
+    "pickupAsap": "As soon as possible",
+    "pickupScheduled": "Schedule a time",
+    "scheduleRequired": "Please choose a pickup time.",
+    "estWait": "estimated wait",
+    "truckClosed": "The truck is closed right now.",
+    "scheduleInstead": "Schedule a time instead.",
+    "scheduledUnavailable": "Scheduled orders aren't being accepted right now."
   },
   "auth": {
     "title": "Sign in to order",
@@ -45,8 +59,10 @@
     "title": "Order",
     "status": "Status",
     "placedOn": "Placed on",
+    "scheduledFor": "Scheduled for",
     "items": "Items",
     "back": "Back to menu",
+    "viewAll": "View all orders",
     "states": {
       "pending_payment": "Awaiting payment",
       "paid": "Paid — sent to the truck",
@@ -56,7 +72,33 @@
       "cancelled": "Cancelled"
     }
   },
-  "phase1": {
-    "placeholder": "Phase 1 placeholder — menu items will appear here once Supabase is wired up."
+  "orders": {
+    "title": "Your orders",
+    "empty": "You haven't placed any orders yet."
+  },
+  "staff": {
+    "title": "Kitchen board",
+    "empty": "No active orders.",
+    "active": "active",
+    "actions": {
+      "startPreparing": "Start preparing",
+      "markReady": "Mark ready",
+      "markPickedUp": "Mark picked up",
+      "cancel": "Cancel"
+    }
+  },
+  "admin": {
+    "title": "Admin",
+    "truckSection": "Truck status",
+    "open": "Open for orders",
+    "acceptingScheduled": "Accepting scheduled orders",
+    "estWaitLabel": "Estimated wait (minutes)",
+    "menuSection": "Menu",
+    "priceLabel": "Price (SAR)",
+    "available": "Available",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "error": "Could not save. Please try again."
   }
 }

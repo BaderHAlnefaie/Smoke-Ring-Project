@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { ShoppingBag } from "lucide-react";
 import { selectTotalQty, useCart } from "@/state/cart";
+import { useHydrated } from "@/lib/use-hydrated";
 
 export function CartButton() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useHydrated();
 
   const open = useCart((s) => s.open);
   const count = useCart(selectTotalQty);

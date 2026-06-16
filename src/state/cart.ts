@@ -10,16 +10,24 @@ export type CartItem = {
   nameAr: string;
   unitHalalas: number;
   qty: number;
+  notes?: string;
 };
+
+export type PickupType = "asap" | "scheduled";
 
 type CartState = {
   items: CartItem[];
   isOpen: boolean;
+  pickupType: PickupType;
+  /** Local datetime-local string (e.g. "2026-06-16T18:30"); empty when ASAP. */
+  scheduledFor: string;
   open: () => void;
   close: () => void;
   add: (item: Omit<CartItem, "qty">) => void;
   setQty: (itemId: number, qty: number) => void;
+  setNotes: (itemId: number, notes: string) => void;
   remove: (itemId: number) => void;
+  setPickup: (pickupType: PickupType, scheduledFor?: string) => void;
   clear: () => void;
 };
 
@@ -28,6 +36,8 @@ export const useCart = create<CartState>()(
     (set) => ({
       items: [],
       isOpen: false,
+      pickupType: "asap",
+      scheduledFor: "",
       open: () => set({ isOpen: true }),
       close: () => set({ isOpen: false }),
       add: (item) =>
@@ -51,14 +61,26 @@ export const useCart = create<CartState>()(
                   i.itemId === itemId ? { ...i, qty } : i,
                 ),
         })),
+      setNotes: (itemId, notes) =>
+        set((s) => ({
+          items: s.items.map((i) =>
+            i.itemId === itemId ? { ...i, notes: notes.slice(0, 280) } : i,
+          ),
+        })),
       remove: (itemId) =>
         set((s) => ({ items: s.items.filter((i) => i.itemId !== itemId) })),
-      clear: () => set({ items: [] }),
+      setPickup: (pickupType, scheduledFor) =>
+        set({ pickupType, scheduledFor: scheduledFor ?? "" }),
+      clear: () => set({ items: [], pickupType: "asap", scheduledFor: "" }),
     }),
     {
       name: "smoke-ring-cart",
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ items: s.items }),
+      partialize: (s) => ({
+        items: s.items,
+        pickupType: s.pickupType,
+        scheduledFor: s.scheduledFor,
+      }),
     },
   ),
 );

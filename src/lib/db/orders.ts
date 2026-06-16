@@ -1,95 +1,59 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { vatHalalas, totalHalalas } from "@/lib/money";
-import type { MenuItem, Order, OrderItem } from "./types";
+import type { Order, OrderItem } from "./types";
 
 export type CartLineInput = {
   itemId: number;
   qty: number;
+  notes?: string | null;
+};
+
+export type PickupOptions = {
+  pickupType?: "asap" | "scheduled";
+  scheduledFor?: string | null;
 };
 
 export type CreatedOrder = {
   order: Order;
-  items: OrderItem[];
 };
 
+/**
+ * Create a pending order atomically.
+ *
+ * Pricing, availability checks, VAT, and the order+items inserts all happen
+ * inside the `create_order` Postgres function (single transaction), so a partial
+ * failure can never leave an orphan order. Prices come from the DB, never the
+ * client — the caller only supplies item ids, quantities, and optional notes.
+ */
 export async function createPendingOrder(
   userId: string,
   lines: CartLineInput[],
+  options: PickupOptions = {},
 ): Promise<CreatedOrder> {
   if (lines.length === 0) throw new Error("Cart is empty");
 
   const admin = createAdminClient();
 
-  const ids = Array.from(new Set(lines.map((l) => l.itemId)));
-  const { data: items, error: menuErr } = await admin
-    .from("menu_items")
-    .select("id, name_en, name_ar, price_halalas, is_available")
-    .in("id", ids);
-
-  if (menuErr) throw new Error(`Menu lookup failed: ${menuErr.message}`);
-  if (!items || items.length !== ids.length) {
-    throw new Error("Some items in your cart are no longer available.");
-  }
-  for (const it of items as Pick<MenuItem, "id" | "is_available">[]) {
-    if (!it.is_available) throw new Error("Some items in your cart are unavailable.");
-  }
-
-  const itemMap = new Map(
-    (items as Array<Pick<MenuItem, "id" | "name_en" | "name_ar" | "price_halalas">>).map(
-      (i) => [i.id, i],
-    ),
-  );
-
-  let subtotal = 0;
-  const itemsToInsert = lines.map((l) => {
-    const item = itemMap.get(l.itemId);
-    if (!item) throw new Error(`Unknown item ${l.itemId}`);
-    if (l.qty <= 0 || !Number.isInteger(l.qty)) {
-      throw new Error("Invalid item quantity.");
-    }
-    subtotal += item.price_halalas * l.qty;
-    return {
-      menu_item_id: item.id,
-      name_en: item.name_en,
-      name_ar: item.name_ar,
+  const { data, error } = await admin.rpc("create_order", {
+    p_user_id: userId,
+    p_lines: lines.map((l) => ({
+      item_id: l.itemId,
       qty: l.qty,
-      unit_halalas: item.price_halalas,
-    };
+      notes: l.notes ?? null,
+    })),
+    p_pickup_type: options.pickupType ?? "asap",
+    p_scheduled_for: options.scheduledFor ?? null,
   });
 
-  const vat = vatHalalas(subtotal);
-  const total = totalHalalas(subtotal);
-
-  const { data: orderRow, error: orderErr } = await admin
-    .from("orders")
-    .insert({
-      user_id: userId,
-      status: "pending_payment",
-      pickup_type: "asap",
-      subtotal_halalas: subtotal,
-      vat_halalas: vat,
-      total_halalas: total,
-    })
-    .select()
-    .single();
-
-  if (orderErr || !orderRow) {
-    throw new Error(`Order create failed: ${orderErr?.message ?? "unknown"}`);
-  }
-  const order = orderRow as Order;
-
-  const { data: insertedItems, error: itemsErr } = await admin
-    .from("order_items")
-    .insert(itemsToInsert.map((i) => ({ ...i, order_id: order.id })))
-    .select();
-
-  if (itemsErr || !insertedItems) {
-    throw new Error(`Order items insert failed: ${itemsErr?.message ?? "unknown"}`);
+  if (error || !data) {
+    // Postgres RAISE messages surface here; they're already user-readable.
+    throw new Error(error?.message ?? "Order create failed");
   }
 
-  return { order, items: insertedItems as OrderItem[] };
+  return { order: data as Order };
 }
+
+export type OrderWithItems = { order: Order; items: OrderItem[] };
 
 export async function fetchOrderForUser(orderId: number, userId: string) {
   const admin = createAdminClient();
@@ -109,4 +73,80 @@ export async function fetchOrderForUser(orderId: number, userId: string) {
   if (itemsErr) throw new Error(itemsErr.message);
 
   return { order: order as Order, items: (items ?? []) as OrderItem[] };
+}
+
+/** All orders for a user, newest first, for the order-history page. */
+export async function fetchOrdersForUser(userId: string): Promise<Order[]> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("orders")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Order[];
+}
+
+/** Just the status of one of a user's orders — used for lightweight polling. */
+export async function fetchOrderStatusForUser(
+  orderId: number,
+  userId: string,
+): Promise<Order["status"] | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("orders")
+    .select("status")
+    .eq("id", orderId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? (data.status as Order["status"]) : null;
+}
+
+const ACTIVE_STATUSES: Order["status"][] = ["paid", "preparing", "ready"];
+
+/** Active orders for the staff queue (paid → preparing → ready), with items. */
+export async function fetchActiveOrdersForStaff(): Promise<OrderWithItems[]> {
+  const admin = createAdminClient();
+  const { data: orders, error } = await admin
+    .from("orders")
+    .select("*")
+    .in("status", ACTIVE_STATUSES)
+    .order("created_at", { ascending: true })
+    .limit(200);
+  if (error) throw new Error(error.message);
+  const list = (orders ?? []) as Order[];
+  if (list.length === 0) return [];
+
+  const { data: items, error: itemsErr } = await admin
+    .from("order_items")
+    .select("*")
+    .in(
+      "order_id",
+      list.map((o) => o.id),
+    );
+  if (itemsErr) throw new Error(itemsErr.message);
+
+  const byOrder = new Map<number, OrderItem[]>();
+  for (const it of (items ?? []) as OrderItem[]) {
+    const arr = byOrder.get(it.order_id) ?? [];
+    arr.push(it);
+    byOrder.set(it.order_id, arr);
+  }
+  return list.map((order) => ({ order, items: byOrder.get(order.id) ?? [] }));
+}
+
+/** Advance an order through its lifecycle via the validated RPC (staff only). */
+export async function advanceOrderStatus(
+  orderId: number,
+  next: Order["status"],
+): Promise<Order> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("advance_order_status", {
+    p_order_id: orderId,
+    p_next: next,
+  });
+  if (error || !data) throw new Error(error?.message ?? "Status update failed");
+  return data as Order;
 }

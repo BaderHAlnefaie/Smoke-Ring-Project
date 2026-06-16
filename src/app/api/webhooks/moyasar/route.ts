@@ -1,27 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyWebhookToken } from "@/lib/moyasar/client";
-import type { OrderStatus } from "@/lib/db/types";
-
-type MoyasarWebhookPayload = {
-  type?: string;
-  secret_token?: string;
-  data?: {
-    id?: string;
-    status?: string;
-    amount?: number;
-    invoice_id?: string | null;
-    metadata?: Record<string, string> | null;
-  };
-};
-
-function nextStatusFor(eventType: string | undefined, paymentStatus: string | undefined): OrderStatus | null {
-  const t = (eventType ?? "").toLowerCase();
-  const s = (paymentStatus ?? "").toLowerCase();
-  if (s === "paid" || t.includes("paid")) return "paid";
-  if (s === "failed" || t.includes("failed")) return "cancelled";
-  return null;
-}
+import {
+  nextStatusFor,
+  stripSecretToken,
+  isAmountTrusted,
+  type MoyasarWebhookPayload,
+} from "@/lib/moyasar/webhook";
+import { log } from "@/lib/log";
 
 export async function POST(req: NextRequest) {
   const raw = await req.text();
@@ -34,6 +20,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!verifyWebhookToken(payload.secret_token)) {
+    log.warn("moyasar_webhook_bad_token", { type: payload.type });
     return NextResponse.json({ error: "invalid_token" }, { status: 401 });
   }
 
@@ -65,9 +52,23 @@ export async function POST(req: NextRequest) {
     if (orderRow) orderId = orderRow.id;
   }
   if (!orderId) {
+    log.warn("moyasar_webhook_order_not_found", { invoiceId, metaOrderId });
     return NextResponse.json({ error: "order_not_found" }, { status: 404 });
   }
 
+  // Load the order so we can verify the paid amount against what we charged.
+  const { data: order } = await admin
+    .from("orders")
+    .select("status, total_halalas")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (!order) {
+    return NextResponse.json({ error: "order_not_found" }, { status: 404 });
+  }
+
+  // Record the payment exactly once (idempotent on moyasar_payment_id).
+  // Strip the shared secret before persisting the raw payload to the DB.
   const { data: existing } = await admin
     .from("payments")
     .select("id")
@@ -80,31 +81,47 @@ export async function POST(req: NextRequest) {
       moyasar_payment_id: moyasarPaymentId,
       amount_halalas: amount,
       status: paymentStatus ?? "unknown",
-      raw: payload,
+      raw: stripSecretToken(payload),
     });
     if (insertErr && !insertErr.message.includes("duplicate")) {
+      log.error("moyasar_webhook_payment_insert_failed", {
+        orderId,
+        message: insertErr.message,
+      });
       return NextResponse.json({ error: insertErr.message }, { status: 500 });
     }
   }
 
   const next = nextStatusFor(payload.type, paymentStatus);
-  if (next) {
-    const { data: order } = await admin
-      .from("orders")
-      .select("status")
-      .eq("id", orderId)
-      .maybeSingle();
 
-    if (order && order.status === "pending_payment") {
-      const { error: updateErr } = await admin
-        .from("orders")
-        .update({ status: next, updated_at: new Date().toISOString() })
-        .eq("id", orderId)
-        .eq("status", "pending_payment");
-      if (updateErr) {
-        return NextResponse.json({ error: updateErr.message }, { status: 500 });
-      }
+  // Critical: never mark an order paid unless the amount matches the order total.
+  if (next === "paid" && !isAmountTrusted(next, amount, order.total_halalas)) {
+    log.error("moyasar_webhook_amount_mismatch", {
+      orderId,
+      paymentId: moyasarPaymentId,
+      expected: order.total_halalas,
+      received: amount,
+    });
+    // Payment is recorded above; status intentionally left unchanged. Return 200
+    // so Moyasar doesn't retry — this needs human review, not a retry storm.
+    return NextResponse.json({ ok: true, status: "amount_mismatch" });
+  }
+
+  if (next && order.status === "pending_payment") {
+    const { error: updateErr } = await admin
+      .from("orders")
+      .update({ status: next, updated_at: new Date().toISOString() })
+      .eq("id", orderId)
+      .eq("status", "pending_payment");
+    if (updateErr) {
+      log.error("moyasar_webhook_status_update_failed", {
+        orderId,
+        next,
+        message: updateErr.message,
+      });
+      return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
+    log.info("moyasar_webhook_status_advanced", { orderId, next });
   }
 
   return NextResponse.json({ ok: true });
