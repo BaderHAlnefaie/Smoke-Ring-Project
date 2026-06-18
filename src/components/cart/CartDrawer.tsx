@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Minus, Plus, Trash2, X } from "lucide-react";
 import { selectSubtotalHalalas, useCart } from "@/state/cart";
 import { useHydrated } from "@/lib/use-hydrated";
@@ -34,7 +34,9 @@ export function CartDrawer({
   const mounted = useHydrated();
 
   const router = useRouter();
+  const pathname = usePathname();
   const isOpen = useCart((s) => s.isOpen);
+  const open = useCart((s) => s.open);
   const close = useCart((s) => s.close);
   const items = useCart((s) => s.items);
   const setQty = useCart((s) => s.setQty);
@@ -67,6 +69,20 @@ export function CartDrawer({
       lastFocused.current?.focus?.();
     };
   }, [isOpen, close]);
+
+  // Resume an interrupted checkout. When a signed-out user hits checkout we
+  // send them to sign in with `?checkout=1` on the return URL; on the way back
+  // (now authenticated) we reopen the cart so they can finish in one click. The
+  // order was never created, so reopening can't produce a duplicate. The flag
+  // is stripped immediately so a refresh won't reopen the drawer.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") !== "1") return;
+    params.delete("checkout");
+    const qs = params.toString();
+    router.replace(`${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    if (useCart.getState().items.length > 0) open();
+  }, [router, open]);
 
   if (!mounted) return null;
 
@@ -111,7 +127,13 @@ export function CartDrawer({
         }),
       });
       if (res.status === 401) {
-        router.push(`/${lang}/sign-in?next=${encodeURIComponent(`/${lang}`)}`);
+        // Not signed in. Reset the drawer's busy state and close it so it
+        // doesn't hang over the sign-in page, then send the user to sign in
+        // and back to where they were with the cart ready to reopen.
+        setSubmitting(false);
+        close();
+        const returnTo = `${pathname}?checkout=1`;
+        router.push(`/${lang}/sign-in?next=${encodeURIComponent(returnTo)}`);
         return;
       }
       if (!res.ok) throw new Error("checkout_failed");
