@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { selectSubtotalHalalas, useCart } from "@/state/cart";
 import { formatHalalas, totalHalalas, vatHalalas } from "@/lib/money";
@@ -38,6 +38,7 @@ export function CartContents({
   fill,
 }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const items = useCart((s) => s.items);
   const setQty = useCart((s) => s.setQty);
   const setNotes = useCart((s) => s.setNotes);
@@ -74,7 +75,13 @@ export function CartContents({
         }),
       });
       if (res.status === 401) {
-        router.push(`/${lang}/sign-in?next=${encodeURIComponent(`/${lang}`)}`);
+        // Not signed in. Reset the busy state and close the drawer (if we're in
+        // one) so it doesn't hang over the sign-in page, then send the user to
+        // sign in and back to where they were with the cart ready to reopen.
+        setSubmitting(false);
+        onClose?.();
+        const returnTo = `${pathname}?checkout=1`;
+        router.push(`/${lang}/sign-in?next=${encodeURIComponent(returnTo)}`);
         return;
       }
       if (!res.ok) throw new Error("checkout_failed");

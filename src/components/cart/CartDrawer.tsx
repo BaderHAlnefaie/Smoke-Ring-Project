@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/state/cart";
 import { useHydrated } from "@/lib/use-hydrated";
 import { CartContents } from "./CartContents";
@@ -17,7 +18,9 @@ type Props = {
 /** Mobile/overlay cart — a slide-over wrapping the shared CartContents. */
 export function CartDrawer({ lang, dict, truckOpen, acceptingScheduled, estWaitMinutes }: Props) {
   const mounted = useHydrated();
+  const router = useRouter();
   const isOpen = useCart((s) => s.isOpen);
+  const open = useCart((s) => s.open);
   const close = useCart((s) => s.close);
 
   useEffect(() => {
@@ -28,6 +31,21 @@ export function CartDrawer({ lang, dict, truckOpen, acceptingScheduled, estWaitM
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [isOpen, close]);
+
+  // Resume an interrupted checkout. When a signed-out user hits checkout we send
+  // them to sign in with `?checkout=1` on the return URL; on the way back (now
+  // authenticated) we reopen the cart so they can finish in one click. The order
+  // was never created, so reopening can't produce a duplicate. The flag is
+  // stripped immediately so a refresh won't reopen the drawer. This lives in the
+  // always-mounted drawer (the sidebar/CartContents only mount conditionally).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") !== "1") return;
+    params.delete("checkout");
+    const qs = params.toString();
+    router.replace(`${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    if (useCart.getState().items.length > 0) open();
+  }, [router, open]);
 
   if (!mounted) return null;
 
