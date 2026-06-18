@@ -41,8 +41,30 @@ export type Database = {
           sort_order: number;
           created_at: string;
         };
-        Insert: never;
-        Update: Partial<{ price_halalas: number; is_available: boolean; sort_order: number }>;
+        Insert: {
+          category_id: number;
+          slug: string;
+          name_en: string;
+          name_ar: string;
+          description_en?: string | null;
+          description_ar?: string | null;
+          price_halalas: number;
+          image_url?: string | null;
+          is_available?: boolean;
+          sort_order?: number;
+        };
+        Update: Partial<{
+          category_id: number;
+          slug: string;
+          name_en: string;
+          name_ar: string;
+          description_en: string | null;
+          description_ar: string | null;
+          price_halalas: number;
+          image_url: string | null;
+          is_available: boolean;
+          sort_order: number;
+        }>;
         Relationships: [];
       };
       truck_status: {
@@ -51,6 +73,7 @@ export type Database = {
           is_open: boolean;
           est_wait_minutes: number;
           accepting_scheduled: boolean;
+          opening_hours: { open: string; close: string; closed: boolean }[];
           updated_at: string;
         };
         Insert: never;
@@ -58,6 +81,7 @@ export type Database = {
           is_open: boolean;
           est_wait_minutes: number;
           accepting_scheduled: boolean;
+          opening_hours: { open: string; close: string; closed: boolean }[];
           updated_at: string;
         }>;
         Relationships: [];
@@ -166,6 +190,26 @@ export type Database = {
       rate_limit_hit: {
         Args: { p_key: string; p_max: number; p_window_seconds: number };
         Returns: boolean;
+      };
+      is_admin: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+      admin_list_team: {
+        Args: Record<string, never>;
+        Returns: {
+          user_id: string;
+          email: string;
+          roles: ("customer" | "staff" | "admin")[];
+        }[];
+      };
+      admin_assign_role: {
+        Args: { p_email: string; p_role: "customer" | "staff" | "admin" };
+        Returns: undefined;
+      };
+      admin_revoke_role: {
+        Args: { p_email: string; p_role: "customer" | "staff" | "admin" };
+        Returns: undefined;
       };
     };
     Enums: {

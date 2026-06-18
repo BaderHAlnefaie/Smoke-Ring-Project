@@ -2,34 +2,32 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FoodIcon, type IconName } from "@/components/icons/FoodIcon";
 import type { OrderStatus } from "@/lib/db/types";
 
 type Props = {
   orderId: number;
   initialStatus: OrderStatus;
-  statusLabel: string;
   states: Record<OrderStatus, string>;
+  iconName: IconName;
+  nowLabel: string;
 };
 
+const STEPS: OrderStatus[] = ["paid", "preparing", "ready", "picked_up"];
 const TERMINAL: OrderStatus[] = ["picked_up", "cancelled"];
 
-function badgeClass(status: OrderStatus): string {
-  if (status === "paid" || status === "preparing" || status === "ready") {
-    return "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200";
-  }
-  if (status === "cancelled") {
-    return "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200";
-  }
-  return "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200";
-}
-
 /**
- * Polls the order status while it's still in flight and updates the badge live,
- * so a customer who just paid sees "Paid" without manually refreshing. Stops
- * polling once the order reaches a terminal state. Refreshes the route on change
- * so server-rendered details (e.g. totals) stay in sync.
+ * Polls the order status every 4s while it's in flight and drives both the hero
+ * label and the vertical stepper's "current" node, so a customer sees progress
+ * without refreshing. Stops once the order reaches a terminal state.
  */
-export function OrderStatusLive({ orderId, initialStatus, statusLabel, states }: Props) {
+export function OrderStatusLive({
+  orderId,
+  initialStatus,
+  states,
+  iconName,
+  nowLabel,
+}: Props) {
   const router = useRouter();
   const [status, setStatus] = useState<OrderStatus>(initialStatus);
   const stopped = useRef(false);
@@ -37,22 +35,17 @@ export function OrderStatusLive({ orderId, initialStatus, statusLabel, states }:
   useEffect(() => {
     if (TERMINAL.includes(initialStatus)) return;
     stopped.current = false;
-
     let timer: ReturnType<typeof setTimeout>;
     const tick = async () => {
       try {
-        const res = await fetch(`/api/orders/${orderId}/status`, {
-          cache: "no-store",
-        });
+        const res = await fetch(`/api/orders/${orderId}/status`, { cache: "no-store" });
         if (res.ok) {
           const data = (await res.json()) as { status?: OrderStatus };
           if (data.status && data.status !== status) {
             setStatus(data.status);
             router.refresh();
           }
-          if (data.status && TERMINAL.includes(data.status)) {
-            stopped.current = true;
-          }
+          if (data.status && TERMINAL.includes(data.status)) stopped.current = true;
         }
       } catch {
         // transient — keep polling
@@ -67,9 +60,78 @@ export function OrderStatusLive({ orderId, initialStatus, statusLabel, states }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, initialStatus]);
 
+  const cancelled = status === "cancelled";
+  const ready = status === "ready" || status === "picked_up";
+  const idx = STEPS.indexOf(status);
+  const live = !TERMINAL.includes(status) && !cancelled;
+
+  const ringFg = cancelled ? "#9c3b22" : ready ? "#6e8b5b" : "#c2622c";
+  const ringBg = cancelled ? "#f6e2dc" : ready ? "#eef2e6" : "#fbe9cc";
+
   return (
-    <div className={`rounded-lg px-4 py-3 text-sm font-medium ${badgeClass(status)}`}>
-      {statusLabel}: <span aria-live="polite">{states[status]}</span>
+    <div>
+      <div className="my-8 text-center">
+        <div
+          className="relative mx-auto mb-4 flex items-center justify-center rounded-full"
+          style={{ width: 104, height: 104, background: ringBg, color: ringFg }}
+        >
+          <FoodIcon name={iconName} size={46} />
+          {live && (
+            <span
+              className="sr-pulse absolute rounded-full bg-ember"
+              style={{ top: 12, insetInlineEnd: 14, width: 13, height: 13 }}
+            />
+          )}
+        </div>
+        <div className="font-serif text-3xl" aria-live="polite">
+          {states[status]}
+        </div>
+      </div>
+
+      {cancelled ? (
+        <div className="rounded-[22px] border border-rust/20 bg-rust/5 px-5 py-5 text-center text-sm font-semibold text-rust">
+          {states.cancelled}
+        </div>
+      ) : (
+        <div className="rounded-[22px] border border-line bg-panel px-5">
+          {STEPS.map((st, i) => {
+            const done = idx >= 0 && i < idx;
+            const current = i === idx;
+            return (
+              <div
+                key={st}
+                className="flex items-center gap-4 border-b border-line-soft py-4 last:border-b-0"
+              >
+                {done ? (
+                  <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-sage text-sm text-white">
+                    ✓
+                  </span>
+                ) : current ? (
+                  <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-ember">
+                    <span className="h-2.5 w-2.5 rounded-full bg-cream" />
+                  </span>
+                ) : (
+                  <span className="h-7 w-7 flex-none rounded-full border-2 border-line bg-panel" />
+                )}
+                <span
+                  className={`text-[15px] ${
+                    current
+                      ? "font-bold text-ink"
+                      : done
+                        ? "font-semibold text-ink"
+                        : "text-faint"
+                  }`}
+                >
+                  {states[st]}
+                </span>
+                {current && live && (
+                  <span className="ms-auto text-[13px] font-semibold text-ember">{nowLabel}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

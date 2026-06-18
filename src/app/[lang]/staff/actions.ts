@@ -1,55 +1,70 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 import { requireStaff } from "@/lib/auth/dal";
-import { advanceOrderStatus } from "@/lib/db/orders";
+import {
+  advanceOrderStatus,
+  setItemPrepared,
+  setOrderRush,
+} from "@/lib/db/orders";
 import { notifyOrderReady } from "@/lib/notify";
 import { log } from "@/lib/log";
 
-const Schema = z.object({
-  orderId: z.coerce.number().int().positive(),
-  next: z.enum(["preparing", "ready", "picked_up", "cancelled"]),
-  lang: z.string(),
-});
-
 export type StaffActionState = { error?: string };
 
+type NextStatus = "preparing" | "ready" | "picked_up" | "cancelled";
+
 /**
- * Advance an order's status from the staff board. Authorization is enforced here
- * (requireStaff) AND the transition legality is enforced in the DB RPC, so an
- * illegal jump (e.g. paid -> picked_up) is rejected even if the UI is bypassed.
+ * Advance an order through its lifecycle. Authorization is enforced here
+ * (requireStaff) AND transition legality is enforced in the DB RPC, so an
+ * illegal jump is rejected even if the client is bypassed.
  */
-export async function setOrderStatus(
-  _prev: StaffActionState | undefined,
-  formData: FormData,
+export async function advanceOrder(
+  orderId: number,
+  next: NextStatus,
+  lang: string,
 ): Promise<StaffActionState> {
-  const parsed = Schema.safeParse({
-    orderId: formData.get("orderId"),
-    next: formData.get("next"),
-    lang: formData.get("lang"),
-  });
-  if (!parsed.success) return { error: "invalid_input" };
-
-  const { orderId, next, lang } = parsed.data;
-
-  // Throws/redirects if the caller isn't staff.
   await requireStaff(`/${lang}/staff`);
-
-  let updated;
   try {
-    updated = await advanceOrderStatus(orderId, next);
+    const updated = await advanceOrderStatus(orderId, next);
+    if (next === "ready") await notifyOrderReady(updated);
   } catch (err) {
     const message = err instanceof Error ? err.message : "update_failed";
-    log.warn("staff_status_update_failed", { orderId, next, message });
+    log.warn("staff_advance_failed", { orderId, next, message });
     return { error: message };
   }
+  revalidatePath(`/${lang}/staff`);
+  return {};
+}
 
-  // Tell the customer when their order is ready (fail-soft).
-  if (next === "ready") {
-    await notifyOrderReady(updated);
+/** Toggle a single item's prepared checkoff on the kitchen card. */
+export async function toggleItemPrepared(
+  orderItemId: number,
+  prepared: boolean,
+  lang: string,
+): Promise<StaffActionState> {
+  await requireStaff(`/${lang}/staff`);
+  try {
+    await setItemPrepared(orderItemId, prepared);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "update_failed" };
   }
+  revalidatePath(`/${lang}/staff`);
+  return {};
+}
 
+/** Flag/unflag an order as a rush. */
+export async function toggleRush(
+  orderId: number,
+  isRush: boolean,
+  lang: string,
+): Promise<StaffActionState> {
+  await requireStaff(`/${lang}/staff`);
+  try {
+    await setOrderRush(orderId, isRush);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "update_failed" };
+  }
   revalidatePath(`/${lang}/staff`);
   return {};
 }

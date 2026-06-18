@@ -22,7 +22,7 @@ export function LocaleSwitch({ current, other, label }: Props) {
   return (
     <Link
       href={href}
-      className="text-sm font-medium underline-offset-4 hover:underline px-2"
+      className="rounded-full border border-line bg-panel px-3.5 py-2 text-sm font-semibold text-ink hover:bg-cream-deep"
     >
       {label}
     </Link>

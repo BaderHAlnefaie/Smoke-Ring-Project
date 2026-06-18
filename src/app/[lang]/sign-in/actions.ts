@@ -14,18 +14,37 @@ export type SignInState = {
   step?: "request" | "verify";
 };
 
+/**
+ * Normalize a phone number to E.164, accepting Saudi local formats.
+ *
+ * Customers naturally type `0554059597`; Supabase needs `+966554059597`.
+ * Stripping with /\D/ keeps only ASCII digits, which also removes spaces,
+ * dashes, parens, and any stray zero-width / BOM characters pasted in.
+ * Returns null if it can't be turned into a valid E.164 number.
+ */
+function normalizePhone(raw: string): string | null {
+  const hadPlus = (raw ?? "").trim().startsWith("+");
+  let s = (raw ?? "").replace(/\D/g, ""); // ASCII digits only
+  if (hadPlus) s = "+" + s;
+  if (!s || s === "+") return null;
+
+  if (s.startsWith("00")) s = "+" + s.slice(2); // 00966… → +966…
+  if (!s.startsWith("+")) {
+    if (s.startsWith("966")) s = "+" + s; // 966… → +966…
+    else if (s.startsWith("0")) s = "+966" + s.slice(1); // 0554… → +966554…
+    else s = "+966" + s; // bare local digits like 554059597
+  }
+
+  return /^\+[1-9]\d{7,14}$/.test(s) ? s : null;
+}
+
 const RequestSchema = useEmailFallback
   ? z.object({ identifier: z.email("Enter a valid email address.") })
-  : z.object({
-      identifier: z
-        .string()
-        .trim()
-        .regex(/^\+?[1-9]\d{7,14}$/, "Enter a valid phone number in E.164 format (e.g. +9665…)."),
-    });
+  : z.object({ identifier: z.string().trim().min(1, "Enter your mobile number.") });
 
 const VerifySchema = z.object({
   identifier: z.string().min(1),
-  token: z.string().trim().regex(/^\d{4,10}$/, "Enter the numeric code from your email."),
+  token: z.string().trim().regex(/^\d{4,10}$/, "Enter the numeric code we sent you."),
 });
 
 export async function requestOtp(
@@ -42,7 +61,20 @@ export async function requestOtp(
     };
   }
 
-  const { identifier } = parsed.data;
+  let identifier = parsed.data.identifier;
+
+  // Phone mode: accept local Saudi formats (e.g. 0554059597) → E.164.
+  if (!useEmailFallback) {
+    const phone = normalizePhone(identifier);
+    if (!phone) {
+      return {
+        error: "Enter a valid Saudi mobile number, e.g. 0554059597.",
+        identifier,
+        step: "request",
+      };
+    }
+    identifier = phone;
+  }
 
   // Throttle OTP sends: caps SMS/email cost and slows account enumeration.
   const ip = clientIp(await headers());

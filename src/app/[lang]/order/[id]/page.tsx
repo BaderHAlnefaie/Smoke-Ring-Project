@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDictionary, isLocale } from "../../dictionaries";
-import { requireUser } from "@/lib/auth/dal";
+import { bounceOperator, requireUser } from "@/lib/auth/dal";
 import { fetchOrderForUser } from "@/lib/db/orders";
 import { formatHalalas } from "@/lib/money";
 import { OrderStatusLive } from "@/components/order/OrderStatusLive";
+import { iconForItem } from "@/components/icons/FoodIcon";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export default async function OrderPage({ params }: PageProps<"/[lang]/order/[id
   const orderId = Number(id);
   if (!Number.isInteger(orderId) || orderId <= 0) notFound();
 
+  await bounceOperator(lang);
   const user = await requireUser(`/${lang}/order/${id}`);
   const dict = await getDictionary(lang);
 
@@ -22,15 +24,7 @@ export default async function OrderPage({ params }: PageProps<"/[lang]/order/[id
   if (!result) notFound();
 
   const { order, items } = result;
-  const placed = new Date(order.created_at);
   const dateLocale = lang === "ar" ? "ar-SA" : "en-SA";
-  const placedFmt = placed.toLocaleString(dateLocale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-
-  const isPending = order.status === "pending_payment";
-
   const scheduledFmt =
     order.pickup_type === "scheduled" && order.scheduled_for
       ? new Date(order.scheduled_for).toLocaleString(dateLocale, {
@@ -39,95 +33,70 @@ export default async function OrderPage({ params }: PageProps<"/[lang]/order/[id
         })
       : null;
 
+  const heroIcon = iconForItem("", items[0]?.name_en ?? "");
+  const count = items.reduce((a, it) => a + it.qty, 0);
+
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">
-          {dict.order.title} #{order.id}
-        </h1>
-        <p className="text-sm text-zinc-500">
-          {dict.order.placedOn} {placedFmt}
-        </p>
-        {scheduledFmt && (
-          <p className="text-sm text-zinc-500">
-            {dict.order.scheduledFor} {scheduledFmt}
-          </p>
-        )}
+    <main className="mx-auto w-full max-w-[600px] flex-1 px-5 py-8 pb-24">
+      <Link
+        href={`/${lang}`}
+        className="inline-flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm font-semibold text-ink"
+      >
+        <span aria-hidden>{lang === "ar" ? "›" : "‹"}</span>
+        {dict.order.back}
+      </Link>
+
+      <div className="mt-4 text-[13px] text-faint">
+        {dict.order.title}{" "}
+        <span className="font-semibold text-ink-soft tabular-nums">#{order.id}</span>
       </div>
+      {scheduledFmt && (
+        <div className="mt-1 text-[13px] text-faint">
+          {dict.order.scheduledFor} {scheduledFmt}
+        </div>
+      )}
 
       <OrderStatusLive
         orderId={order.id}
         initialStatus={order.status}
-        statusLabel={dict.order.status}
         states={dict.order.states}
+        iconName={heroIcon}
+        nowLabel={dict.order.now}
       />
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">{dict.order.items}</h2>
-        <ul className="divide-y divide-black/[.06] dark:divide-white/[.08] rounded-lg border border-black/[.06] dark:border-white/[.08]">
-          {items.map((it) => {
-            const name = lang === "ar" ? it.name_ar : it.name_en;
-            return (
-              <li key={it.id} className="flex items-start gap-3 px-4 py-3">
-                <span className="w-8 shrink-0 text-sm tabular-nums text-zinc-500">×{it.qty}</span>
-                <span className="flex-1 min-w-0">
-                  <span className="block truncate">{name}</span>
-                  {it.notes && (
-                    <span className="block text-xs text-zinc-500 mt-0.5">{it.notes}</span>
-                  )}
+      <section className="mt-5 rounded-[22px] border border-line bg-panel px-5 py-4">
+        <div className="mb-2 text-[11.5px] font-bold uppercase tracking-wider text-faint">
+          {count} {dict.order.items}
+        </div>
+        {items.map((it) => {
+          const name = lang === "ar" ? it.name_ar : it.name_en;
+          return (
+            <div key={it.id} className="py-1.5">
+              <div className="flex items-center justify-between text-[14.5px]">
+                <span>
+                  <span className="tabular-nums text-ink-soft">{it.qty} × </span>
+                  {name}
                 </span>
-                <span className="text-sm tabular-nums">
+                <span className="tabular-nums text-ink-soft">
                   {formatHalalas(it.unit_halalas * it.qty, lang)}
                 </span>
-              </li>
-            );
-          })}
-        </ul>
+              </div>
+              {it.notes && <div className="mt-0.5 text-xs text-clay">↳ {it.notes}</div>}
+            </div>
+          );
+        })}
+        <div className="mt-1.5 flex items-center justify-between border-t border-line-soft pt-3 text-[15.5px] font-bold">
+          <span>{dict.order.totalPaid}</span>
+          <span className="tabular-nums">{formatHalalas(order.total_halalas, lang)}</span>
+        </div>
       </section>
 
-      <section className="space-y-1 text-sm">
-        <Row label={dict.cart.subtotal} value={formatHalalas(order.subtotal_halalas, lang)} />
-        <Row label={dict.cart.vat} value={formatHalalas(order.vat_halalas, lang)} />
-        <Row
-          label={dict.cart.total}
-          value={formatHalalas(order.total_halalas, lang)}
-          bold
-        />
-      </section>
-
-      {isPending && (
-        <p className="text-sm text-zinc-500">
-          {dict.order.states.pending_payment}…
-        </p>
-      )}
-
-      <div className="flex items-center gap-4">
-        <Link
-          href={`/${lang}`}
-          className="inline-block text-sm font-medium underline-offset-4 hover:underline"
-        >
-          {dict.order.back}
-        </Link>
-        <Link
-          href={`/${lang}/orders`}
-          className="inline-block text-sm font-medium underline-offset-4 hover:underline"
-        >
-          {dict.order.viewAll}
-        </Link>
-      </div>
+      <Link
+        href={`/${lang}/orders`}
+        className="mt-5 inline-block text-sm font-semibold text-ember underline-offset-4 hover:underline"
+      >
+        {dict.order.viewAll}
+      </Link>
     </main>
-  );
-}
-
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  return (
-    <div
-      className={`flex items-center justify-between ${
-        bold ? "font-semibold text-base" : "text-zinc-600 dark:text-zinc-400"
-      }`}
-    >
-      <span>{label}</span>
-      <span className="tabular-nums">{value}</span>
-    </div>
   );
 }

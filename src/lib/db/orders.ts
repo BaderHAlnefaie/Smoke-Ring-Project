@@ -53,7 +53,7 @@ export async function createPendingOrder(
   return { order: data as Order };
 }
 
-export type OrderWithItems = { order: Order; items: OrderItem[] };
+export type OrderWithItems = { order: Order; items: OrderItem[]; customer?: string | null };
 
 export async function fetchOrderForUser(orderId: number, userId: string) {
   const admin = createAdminClient();
@@ -134,7 +134,23 @@ export async function fetchActiveOrdersForStaff(): Promise<OrderWithItems[]> {
     arr.push(it);
     byOrder.set(it.order_id, arr);
   }
-  return list.map((order) => ({ order, items: byOrder.get(order.id) ?? [] }));
+
+  // Attach a customer name (display name, else phone) for the kitchen card.
+  const userIds = [...new Set(list.map((o) => o.user_id))];
+  const { data: profiles } = await admin
+    .from("profiles")
+    .select("id,display_name,phone")
+    .in("id", userIds);
+  const nameById = new Map<string, string | null>();
+  for (const p of (profiles ?? []) as { id: string; display_name: string | null; phone: string | null }[]) {
+    nameById.set(p.id, p.display_name?.trim() || p.phone || null);
+  }
+
+  return list.map((order) => ({
+    order,
+    items: byOrder.get(order.id) ?? [],
+    customer: nameById.get(order.user_id) ?? null,
+  }));
 }
 
 /** Advance an order through its lifecycle via the validated RPC (staff only). */
@@ -149,4 +165,38 @@ export async function advanceOrderStatus(
   });
   if (error || !data) throw new Error(error?.message ?? "Status update failed");
   return data as Order;
+}
+
+/** Toggle a single order item's prepared (cooked) checkoff. Staff only. */
+export async function setItemPrepared(orderItemId: number, prepared: boolean): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("order_items")
+    .update({ prepared })
+    .eq("id", orderItemId);
+  if (error) throw new Error(error.message);
+}
+
+/** Flag/unflag an order as a rush (jumps to the top of its lane). Staff only. */
+export async function setOrderRush(orderId: number, isRush: boolean): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("orders")
+    .update({ is_rush: isRush })
+    .eq("id", orderId);
+  if (error) throw new Error(error.message);
+}
+
+/** Count orders handed over (picked_up) since UTC midnight — the KDS "Done today". */
+export async function countCompletedToday(): Promise<number> {
+  const admin = createAdminClient();
+  const start = new Date();
+  start.setUTCHours(0, 0, 0, 0);
+  const { count, error } = await admin
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "picked_up")
+    .gte("updated_at", start.toISOString());
+  if (error) throw new Error(error.message);
+  return count ?? 0;
 }

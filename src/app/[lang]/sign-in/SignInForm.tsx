@@ -13,6 +13,13 @@ type Props = {
 const requestInitial: SignInState = { step: "request" };
 const verifyInitial: SignInState = {};
 
+const inputClass =
+  "w-full rounded-xl border border-line bg-panel px-3.5 py-3 text-base text-ink placeholder:text-faint focus:border-ember focus:outline-none";
+const primaryBtn =
+  "w-full rounded-2xl bg-ember px-5 py-3.5 text-base font-bold text-cream shadow-lg shadow-ember/30 disabled:opacity-60";
+const labelClass =
+  "text-[11.5px] font-bold uppercase tracking-wider text-faint";
+
 export function SignInForm({ next, mode, dict }: Props) {
   const [requestState, requestAction, requestPending] = useActionState(
     requestOtp,
@@ -32,13 +39,13 @@ export function SignInForm({ next, mode, dict }: Props) {
   if (step === "verify") {
     return (
       <form action={verifyAction} className="space-y-4">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {dict.codeSentTo} <span className="font-medium">{activeIdentifier}</span>
+        <p className="text-sm text-ink-soft">
+          {dict.codeSentTo} <span className="font-semibold text-ink">{activeIdentifier}</span>
         </p>
         <input type="hidden" name="identifier" value={activeIdentifier} />
         <input type="hidden" name="next" value={next} />
-        <label className="block space-y-1">
-          <span className="text-sm font-medium">{dict.codeLabel}</span>
+        <label className="block space-y-2">
+          <span className={labelClass}>{dict.codeLabel}</span>
           <input
             name="token"
             type="text"
@@ -47,17 +54,11 @@ export function SignInForm({ next, mode, dict }: Props) {
             pattern="\d{4,10}"
             maxLength={10}
             required
-            className="w-full rounded-md border border-black/[.12] dark:border-white/[.12] bg-white dark:bg-zinc-950 px-3 py-2 text-base tabular-nums tracking-widest"
+            className={`${inputClass} text-center text-lg tracking-[0.4em] tabular-nums`}
           />
         </label>
-        {verifyState.error && (
-          <p className="text-sm text-red-600">{verifyState.error}</p>
-        )}
-        <button
-          type="submit"
-          disabled={verifyPending}
-          className="w-full rounded-full bg-foreground px-5 py-3 text-base font-medium text-background disabled:opacity-60"
-        >
+        {verifyState.error && <p className="text-sm text-rust">{verifyState.error}</p>}
+        <button type="submit" disabled={verifyPending} className={primaryBtn}>
           {verifyPending ? dict.verifying : dict.verify}
         </button>
       </form>
@@ -67,8 +68,8 @@ export function SignInForm({ next, mode, dict }: Props) {
   return (
     <form action={requestAction} className="space-y-4">
       <input type="hidden" name="next" value={next} />
-      <label className="block space-y-1">
-        <span className="text-sm font-medium">
+      <label className="block space-y-2">
+        <span className={labelClass}>
           {mode === "phone" ? dict.phoneLabel : dict.emailLabel}
         </span>
         <input
@@ -76,21 +77,15 @@ export function SignInForm({ next, mode, dict }: Props) {
           type={mode === "phone" ? "tel" : "email"}
           inputMode={mode === "phone" ? "tel" : "email"}
           autoComplete={mode === "phone" ? "tel" : "email"}
-          placeholder={mode === "phone" ? "+9665XXXXXXXX" : "you@example.com"}
+          placeholder={mode === "phone" ? "05XXXXXXXX" : "you@example.com"}
           defaultValue={requestState.identifier ?? ""}
           onChange={(e) => setIdentifier(e.target.value)}
           required
-          className="w-full rounded-md border border-black/[.12] dark:border-white/[.12] bg-white dark:bg-zinc-950 px-3 py-2 text-base"
+          className={inputClass}
         />
       </label>
-      {requestState.error && (
-        <p className="text-sm text-red-600">{requestState.error}</p>
-      )}
-      <button
-        type="submit"
-        disabled={requestPending}
-        className="w-full rounded-full bg-foreground px-5 py-3 text-base font-medium text-background disabled:opacity-60"
-      >
+      {requestState.error && <p className="text-sm text-rust">{requestState.error}</p>}
+      <button type="submit" disabled={requestPending} className={primaryBtn}>
         {requestPending ? dict.sending : dict.sendCode}
       </button>
     </form>

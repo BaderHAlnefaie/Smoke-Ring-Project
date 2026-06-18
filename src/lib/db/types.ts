@@ -20,11 +20,14 @@ export type MenuItem = {
   sort_order: number;
 };
 
+export type OpeningHour = { open: string; close: string; closed: boolean };
+
 export type TruckStatus = {
   id: number;
   is_open: boolean;
   est_wait_minutes: number;
   accepting_scheduled: boolean;
+  opening_hours: OpeningHour[];
 };
 
 export type OrderStatus =
@@ -45,6 +48,7 @@ export type Order = {
   vat_halalas: number;
   total_halalas: number;
   moyasar_invoice_id: string | null;
+  is_rush: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -58,6 +62,7 @@ export type OrderItem = {
   qty: number;
   unit_halalas: number;
   notes: string | null;
+  prepared: boolean;
 };
 
 export type Payment = {
