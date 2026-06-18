@@ -1,4 +1,4 @@
-import type { Order, OrderItem, Payment } from "./types";
+import type { Order, OrderItem, Payment, InventoryItem, MenuItemIngredient } from "./types";
 
 type Insertable<T> = Omit<T, "id" | "created_at" | "updated_at">;
 
@@ -40,6 +40,7 @@ export type Database = {
           is_available: boolean;
           sort_order: number;
           created_at: string;
+          auto_86: boolean;
         };
         Insert: {
           category_id: number;
@@ -51,6 +52,7 @@ export type Database = {
           price_halalas: number;
           image_url?: string | null;
           is_available?: boolean;
+          auto_86?: boolean;
           sort_order?: number;
         };
         Update: Partial<{
@@ -63,6 +65,7 @@ export type Database = {
           price_halalas: number;
           image_url: string | null;
           is_available: boolean;
+          auto_86: boolean;
           sort_order: number;
         }>;
         Relationships: [];
@@ -171,6 +174,57 @@ export type Database = {
         Update: Partial<{ status: string; detail: string | null }>;
         Relationships: [];
       };
+      inventory_items: {
+        Row: InventoryItem;
+        Insert: {
+          name_en: string;
+          name_ar: string;
+          unit_label_en?: string;
+          unit_label_ar?: string;
+          servings_per_unit: number;
+          stock_servings?: number;
+          low_stock_servings?: number;
+          is_active?: boolean;
+        };
+        Update: Partial<{
+          name_en: string;
+          name_ar: string;
+          unit_label_en: string;
+          unit_label_ar: string;
+          servings_per_unit: number;
+          stock_servings: number;
+          low_stock_servings: number;
+          is_active: boolean;
+          updated_at: string;
+        }>;
+        Relationships: [];
+      };
+      menu_item_ingredients: {
+        Row: MenuItemIngredient;
+        Insert: { menu_item_id: number; inventory_item_id: number; servings_per_item?: number };
+        Update: Partial<{ servings_per_item: number }>;
+        Relationships: [];
+      };
+      inventory_movements: {
+        Row: {
+          id: number;
+          inventory_item_id: number;
+          order_id: number | null;
+          servings_delta: number;
+          reason: string;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          inventory_item_id: number;
+          order_id?: number | null;
+          servings_delta: number;
+          reason: string;
+          created_by?: string | null;
+        };
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -210,6 +264,15 @@ export type Database = {
       admin_revoke_role: {
         Args: { p_email: string; p_role: "customer" | "staff" | "admin" };
         Returns: undefined;
+      };
+      adjust_inventory: {
+        Args: {
+          p_inventory_item_id: number;
+          p_servings_delta: number;
+          p_reason: string;
+          p_user?: string | null;
+        };
+        Returns: InventoryItem;
       };
     };
     Enums: {

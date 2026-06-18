@@ -21,6 +21,7 @@ export function AdminSidebar({ lang, dict, activeOrders, userEmail }: Props) {
     { href: base, icon: "grid", label: dict.adminNav.dashboard },
     { href: `${base}/orders`, icon: "receipt", label: dict.adminNav.orders, badge: activeOrders },
     { href: `${base}/menu`, icon: "bowl", label: dict.adminNav.menu },
+    { href: `${base}/inventory`, icon: "box", label: dict.adminNav.inventory },
     { href: `${base}/truck`, icon: "truck", label: dict.adminNav.truck },
     { href: `${base}/team`, icon: "users", label: dict.adminNav.team },
   ];

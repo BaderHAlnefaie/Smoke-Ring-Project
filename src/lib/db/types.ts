@@ -65,6 +65,27 @@ export type OrderItem = {
   prepared: boolean;
 };
 
+export type InventoryItem = {
+  id: number;
+  name_en: string;
+  name_ar: string;
+  unit_label_en: string;
+  unit_label_ar: string;
+  servings_per_unit: number;
+  stock_servings: number;
+  low_stock_servings: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MenuItemIngredient = {
+  id: number;
+  menu_item_id: number;
+  inventory_item_id: number;
+  servings_per_item: number;
+};
+
 export type Payment = {
   id: number;
   order_id: number;

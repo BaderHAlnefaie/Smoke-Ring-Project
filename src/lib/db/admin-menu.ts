@@ -27,7 +27,10 @@ export async function updateMenuItem(
   patch: { price_halalas?: number; is_available?: boolean },
 ): Promise<void> {
   const admin = createAdminClient();
-  const { error } = await admin.from("menu_items").update(patch).eq("id", id);
+  // A manual availability change takes control back from inventory auto-86, so
+  // restocking won't silently flip the item the admin just set.
+  const finalPatch = "is_available" in patch ? { ...patch, auto_86: false } : patch;
+  const { error } = await admin.from("menu_items").update(finalPatch).eq("id", id);
   if (error) throw new Error(error.message);
 }
 
@@ -44,7 +47,11 @@ export type MenuItemFields = {
 
 export async function updateMenuItemFields(id: number, fields: MenuItemFields): Promise<void> {
   const admin = createAdminClient();
-  const { error } = await admin.from("menu_items").update(fields).eq("id", id);
+  // Saving an item sets is_available explicitly — clear inventory auto-86 too.
+  const { error } = await admin
+    .from("menu_items")
+    .update({ ...fields, auto_86: false })
+    .eq("id", id);
   if (error) throw new Error(error.message);
 }
 
