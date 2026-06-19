@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
   const invoiceId = payload.data?.invoice_id ?? null;
   const metaOrderId = payload.data?.metadata?.order_id ?? null;
   const amount = payload.data?.amount ?? 0;
+  const currency = payload.data?.currency;
 
   if (!moyasarPaymentId || (!invoiceId && !metaOrderId)) {
     return NextResponse.json({ error: "missing_fields" }, { status: 400 });
@@ -95,12 +96,13 @@ export async function POST(req: NextRequest) {
   const next = nextStatusFor(payload.type, paymentStatus);
 
   // Critical: never mark an order paid unless the amount matches the order total.
-  if (next === "paid" && !isAmountTrusted(next, amount, order.total_halalas)) {
+  if (next === "paid" && !isAmountTrusted(next, amount, order.total_halalas, currency)) {
     log.error("moyasar_webhook_amount_mismatch", {
       orderId,
       paymentId: moyasarPaymentId,
       expected: order.total_halalas,
       received: amount,
+      currency: currency ?? null,
     });
     // Payment is recorded above; status intentionally left unchanged. Return 200
     // so Moyasar doesn't retry — this needs human review, not a retry storm.

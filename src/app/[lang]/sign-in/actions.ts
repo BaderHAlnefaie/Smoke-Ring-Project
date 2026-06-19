@@ -77,12 +77,14 @@ export async function requestOtp(
   }
 
   // Throttle OTP sends: caps SMS/email cost and slows account enumeration.
+  // Fail closed — a broken limiter must not become a free SMS/email firehose.
   const ip = clientIp(await headers());
   const perId = await rateLimit(`otp:${identifier.toLowerCase()}`, {
     max: 5,
     windowSeconds: 600,
+    failClosed: true,
   });
-  const perIp = await rateLimit(`otp-ip:${ip}`, { max: 15, windowSeconds: 600 });
+  const perIp = await rateLimit(`otp-ip:${ip}`, { max: 15, windowSeconds: 600, failClosed: true });
   if (!perId || !perIp) {
     return {
       error: "Too many attempts. Please wait a few minutes and try again.",
@@ -126,8 +128,30 @@ export async function verifyOtp(
     };
   }
 
-  const supabase = await createClient();
   const { identifier, token } = parsed.data;
+
+  // Throttle verification attempts: a 4–6 digit code with unlimited guesses is
+  // brute-forceable before it expires. Fail closed for the same reason as send.
+  const ip = clientIp(await headers());
+  const idAllowed = await rateLimit(`otp-verify:${identifier.toLowerCase()}`, {
+    max: 8,
+    windowSeconds: 600,
+    failClosed: true,
+  });
+  const ipAllowed = await rateLimit(`otp-verify-ip:${ip}`, {
+    max: 30,
+    windowSeconds: 600,
+    failClosed: true,
+  });
+  if (!idAllowed || !ipAllowed) {
+    return {
+      error: "Too many attempts. Please wait a few minutes and try again.",
+      identifier,
+      step: "verify",
+    };
+  }
+
+  const supabase = await createClient();
 
   const { error } = useEmailFallback
     ? await supabase.auth.verifyOtp({ email: identifier, token, type: "email" })

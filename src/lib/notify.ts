@@ -32,6 +32,9 @@ async function sendSms(to: string, body: string): Promise<{ ok: boolean; detail?
         },
         body: new URLSearchParams({ To: to, From: from, Body: body }),
         cache: "no-store",
+        // Cap the call so a hung Twilio can't stall the staff "ready" action.
+        // Delivery is fail-soft anyway: a timeout just falls back to a logged record.
+        signal: AbortSignal.timeout(8000),
       },
     );
     if (!res.ok) return { ok: false, detail: `twilio_${res.status}` };
