@@ -175,7 +175,8 @@
     "ingredientsAr": "Ingredients (Arabic)",
     "availableNow": "Available now",
     "cancel": "Cancel",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "subInventory": "Track ingredients; items auto-86 when you run out"
   },
   "adminNav": {
     "dashboard": "Dashboard",
@@ -183,7 +184,8 @@
     "menu": "Menu",
     "truck": "Truck",
     "team": "Team",
-    "backOffice": "Back office"
+    "backOffice": "Back office",
+    "inventory": "Inventory"
   },
   "team": {
     "title": "Team",
@@ -206,5 +208,42 @@
       "last_admin": "You can't remove the last admin.",
       "generic": "Something went wrong. Please try again."
     }
+  },
+  "inventory": {
+    "stockTab": "Stock",
+    "recipesTab": "Recipes",
+    "addItem": "Add item",
+    "newItem": "New inventory item",
+    "editItem": "Edit item",
+    "nameEn": "Name (English)",
+    "nameAr": "Name (Arabic)",
+    "unitLabelEn": "Unit name (English)",
+    "unitLabelAr": "Unit name (Arabic)",
+    "unitHint": "e.g. bag, box, tray",
+    "servingsPerUnit": "Servings per unit",
+    "servingsHint": "How many one unit makes — e.g. 1 bag = 9 sandwiches",
+    "lowThreshold": "Low-stock alert (servings)",
+    "tracked": "Tracked",
+    "remaining": "remaining",
+    "servings": "servings",
+    "ok": "In stock",
+    "low": "Low",
+    "out": "Out",
+    "receive": "Receive",
+    "receivePrompt": "Units received",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this inventory item? Its recipe links are removed too.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "emptyStock": "No inventory items yet.",
+    "uses": "Uses",
+    "addIngredient": "Add ingredient",
+    "perItem": "per item",
+    "noIngredients": "No ingredients tracked yet.",
+    "remove": "Remove",
+    "selectItem": "Select ingredient",
+    "emptyMenu": "No menu items yet.",
+    "autoEnabled": "Auto-86 on"
   }
 }

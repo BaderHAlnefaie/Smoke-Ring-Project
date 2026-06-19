@@ -13,7 +13,8 @@ export type UiIconName =
   | "bowl"
   | "truck"
   | "users"
-  | "coins";
+  | "coins"
+  | "box";
 
 const PATHS: Record<UiIconName, React.ReactNode> = {
   grid: (
@@ -80,6 +81,12 @@ const PATHS: Record<UiIconName, React.ReactNode> = {
     <>
       <circle cx={12} cy={12} r={9} />
       <path d="M12 7.5 v4.5 l3 1.8" />
+    </>
+  ),
+  box: (
+    <>
+      <path d="M3 7 l9 -4 l9 4 v10 l-9 4 l-9 -4 Z" />
+      <path d="M3 7 l9 4 l9 -4 M12 11 v10" />
     </>
   ),
   plus: <path d="M12 5 v14 M5 12 h14" />,
