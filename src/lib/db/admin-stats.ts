@@ -64,46 +64,53 @@ export async function fetchDashboard(lang: "en" | "ar"): Promise<Dashboard> {
   const admin = createAdminClient();
   const todayISO = startOfTodayISO();
 
-  const { data: todays } = await admin
+  // KPIs and top sellers are aggregated in SQL over the *full* day — no row cap,
+  // no client-side reduce. (The old path capped at 2000 orders and derived top
+  // sellers from only the last 40 orders, both wrong past those thresholds.)
+  const [statsRes, sellersRes] = await Promise.all([
+    admin.rpc("admin_dashboard_stats", { p_since: todayISO }),
+    admin.rpc("admin_top_sellers", { p_since: todayISO, p_limit: 5 }),
+  ]);
+  if (statsRes.error) throw new Error(statsRes.error.message);
+  if (sellersRes.error) throw new Error(sellersRes.error.message);
+
+  const stats = statsRes.data?.[0];
+  const ordersToday = Number(stats?.orders_today ?? 0);
+  const revenueTodayHalalas = Number(stats?.revenue_today_halalas ?? 0);
+  const avgPrepMins = stats?.avg_prep_mins == null ? null : Number(stats.avg_prep_mins);
+  const activeNow = Number(stats?.active_now ?? 0);
+
+  const topSellers = (sellersRes.data ?? []).map((r) => ({
+    name: lang === "ar" ? r.name_ar : r.name_en,
+    count: Number(r.qty),
+  }));
+
+  // Live feed: the newest few in-flight orders with their items, queried directly
+  // (not derived from a capped recent-orders list).
+  const { data: activeRows, error: activeErr } = await admin
     .from("orders")
-    .select("id,total_halalas,status,created_at,updated_at")
-    .gte("created_at", todayISO)
-    .limit(2000);
-  const todayList = (todays ?? []) as Pick<
-    Order,
-    "id" | "total_halalas" | "status" | "created_at" | "updated_at"
-  >[];
-  const counted = todayList.filter(
-    (o) => o.status !== "cancelled" && o.status !== "pending_payment",
-  );
-  const ordersToday = counted.length;
-  const revenueTodayHalalas = counted.reduce((a, o) => a + o.total_halalas, 0);
+    .select("*")
+    .in("status", ACTIVE)
+    .order("created_at", { ascending: false })
+    .limit(5);
+  if (activeErr) throw new Error(activeErr.message);
+  const activeList = (activeRows ?? []) as Order[];
 
-  const prep = todayList
-    .filter((o) => o.status === "picked_up" || o.status === "ready")
-    .map((o) => (new Date(o.updated_at).getTime() - new Date(o.created_at).getTime()) / 60000)
-    .filter((m) => m > 0 && m < 300);
-  const avgPrepMins = prep.length
-    ? Math.round(prep.reduce((a, b) => a + b, 0) / prep.length)
-    : null;
-
-  const recent = await fetchAdminOrders(40);
-  const liveOrders = recent.filter((o) => ACTIVE.includes(o.order.status)).slice(0, 5);
-  const activeNow = recent.filter((o) => ACTIVE.includes(o.order.status)).length;
-
-  const tally = new Map<string, number>();
-  for (const { order, items } of recent) {
-    if (new Date(order.created_at).toISOString() < todayISO) continue;
-    if (order.status === "cancelled" || order.status === "pending_payment") continue;
-    for (const it of items) {
-      const name = lang === "ar" ? it.name_ar : it.name_en;
-      tally.set(name, (tally.get(name) ?? 0) + it.qty);
+  let liveOrders: AdminOrder[] = [];
+  if (activeList.length > 0) {
+    const { data: items, error: itemsErr } = await admin
+      .from("order_items")
+      .select("*")
+      .in("order_id", activeList.map((o) => o.id));
+    if (itemsErr) throw new Error(itemsErr.message);
+    const byOrder = new Map<number, OrderItem[]>();
+    for (const it of (items ?? []) as OrderItem[]) {
+      const arr = byOrder.get(it.order_id) ?? [];
+      arr.push(it);
+      byOrder.set(it.order_id, arr);
     }
+    liveOrders = activeList.map((order) => ({ order, items: byOrder.get(order.id) ?? [] }));
   }
-  const topSellers = [...tally.entries()]
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
 
   return { ordersToday, revenueTodayHalalas, avgPrepMins, activeNow, liveOrders, topSellers };
 }
