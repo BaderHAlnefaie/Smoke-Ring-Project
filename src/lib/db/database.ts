@@ -274,6 +274,19 @@ export type Database = {
         };
         Returns: InventoryItem;
       };
+      admin_dashboard_stats: {
+        Args: { p_since: string };
+        Returns: {
+          orders_today: number;
+          revenue_today_halalas: number;
+          avg_prep_mins: number | null;
+          active_now: number;
+        }[];
+      };
+      admin_top_sellers: {
+        Args: { p_since: string; p_limit?: number };
+        Returns: { name_en: string; name_ar: string; qty: number }[];
+      };
     };
     Enums: {
       app_role: "customer" | "staff" | "admin";
