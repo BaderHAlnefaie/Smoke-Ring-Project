@@ -37,14 +37,21 @@ describe("stripSecretToken", () => {
 });
 
 describe("isAmountTrusted", () => {
-  it("trusts a paid event only when the amount matches the order total", () => {
-    expect(isAmountTrusted("paid", 11500, 11500)).toBe(true);
-    expect(isAmountTrusted("paid", 9000, 11500)).toBe(false);
-    expect(isAmountTrusted("paid", 12000, 11500)).toBe(false);
+  it("trusts a paid event only when the amount matches the order total in SAR", () => {
+    expect(isAmountTrusted("paid", 11500, 11500, "SAR")).toBe(true);
+    expect(isAmountTrusted("paid", 11500, 11500, "sar")).toBe(true); // case-insensitive
+    expect(isAmountTrusted("paid", 9000, 11500, "SAR")).toBe(false);
+    expect(isAmountTrusted("paid", 12000, 11500, "SAR")).toBe(false);
   });
 
-  it("does not gate non-paid transitions on amount", () => {
-    expect(isAmountTrusted("cancelled", 0, 11500)).toBe(true);
-    expect(isAmountTrusted(null, 0, 11500)).toBe(true);
+  it("rejects a paid event in any non-SAR currency even when the amount matches", () => {
+    expect(isAmountTrusted("paid", 11500, 11500, "USD")).toBe(false);
+    expect(isAmountTrusted("paid", 11500, 11500, undefined)).toBe(false);
+    expect(isAmountTrusted("paid", 11500, 11500, "")).toBe(false);
+  });
+
+  it("does not gate non-paid transitions on amount or currency", () => {
+    expect(isAmountTrusted("cancelled", 0, 11500, undefined)).toBe(true);
+    expect(isAmountTrusted(null, 0, 11500, "USD")).toBe(true);
   });
 });

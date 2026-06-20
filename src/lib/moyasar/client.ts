@@ -33,23 +33,47 @@ export async function createInvoice(
     }
   }
 
-  const res = await fetch(`${API_BASE}/invoices`, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${secret}:`).toString("base64")}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body,
-    cache: "no-store",
-  });
+  const reqHeaders = {
+    Authorization: `Basic ${Buffer.from(`${secret}:`).toString("base64")}`,
+    "Content-Type": "application/x-www-form-urlencoded",
+  };
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Moyasar invoice failed (${res.status}): ${text}`);
+  // Bounded retry: a slow/hung Moyasar must not hang checkout indefinitely, and
+  // transient network/5xx errors shouldn't fail an otherwise-valid order. Never
+  // retry a 4xx (our request is wrong — retrying won't help). Each attempt is
+  // capped at 8s; no payment is created until the customer pays on the hosted
+  // invoice, so a retried invoice creation can't double-charge anyone.
+  const MAX_ATTEMPTS = 2;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(`${API_BASE}/invoices`, {
+        method: "POST",
+        headers: reqHeaders,
+        body,
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (res.ok) {
+        return (await res.json()) as MoyasarInvoice;
+      }
+
+      const text = await res.text();
+      const err = new Error(`Moyasar invoice failed (${res.status}): ${text}`);
+      if (res.status < 500) throw err; // client error — not retryable
+      lastErr = err; // 5xx — retry
+    } catch (err) {
+      // Non-retryable client errors bubble straight up.
+      if (err instanceof Error && err.message.startsWith("Moyasar invoice failed (4")) {
+        throw err;
+      }
+      lastErr = err; // timeout / network — retry
+    }
   }
-
-  const data = (await res.json()) as MoyasarInvoice;
-  return data;
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error("Moyasar invoice failed after retries");
 }
 
 // Moyasar does not HMAC webhooks. The shared secret you configure in the
